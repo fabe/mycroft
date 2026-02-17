@@ -30,6 +30,19 @@ mycroft config resolve
 mycroft config onboard
 ```
 
+## Cost estimates (approximate)
+
+These are rough, model-dependent estimates for embeddings + optional summaries. Costs vary by model pricing and book structure. Use this as a directional guide only. Summarization estimates assume `gpt-5-nano` and embeddings assume `text-embedding-3-small`.
+
+| Book size | Example | No summaries | With summaries |
+| --- | --- | --- | --- |
+| Small | 200-300 pages | ~$0.002-$0.004 | ~$0.04-$0.08 |
+| Average novel | 350-450 pages | ~$0.004-$0.006 | ~$0.08-$0.15 |
+| Large novel | 600-800 pages | ~$0.007-$0.01 | ~$0.15-$0.25 |
+| Trilogy | 1,500-2,000 pages | ~$0.02-$0.03 | ~$0.30-$0.60 |
+
+Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, and about ~$0.20 with summaries.
+
 ## Local dev
 
 ```bash
