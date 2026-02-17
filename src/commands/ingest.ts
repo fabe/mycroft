@@ -27,7 +27,7 @@ const parseIndexSelection = (input: string, max: number): number[] => {
   return Array.from(indices).sort((a, b) => a - b);
 };
 
-export const ingestCommand = async (filePath: string, options: { manual?: boolean; summarize?: boolean }) => {
+export const ingestCommand = async (filePath: string, options: { manual?: boolean; summarize?: boolean; batch?: boolean }) => {
   requireOpenAIKey();
   await ensureDataDirs();
   try {
@@ -64,6 +64,6 @@ export const ingestCommand = async (filePath: string, options: { manual?: boolea
     }
   }
 
-  const result = await ingestEpub(filePath, selectedChapterIndices, { summarize: options.summarize ?? false });
+  const result = await ingestEpub(filePath, selectedChapterIndices, { summarize: options.summarize ?? false, batch: options.batch ?? false });
   stdout(`\nDone. Book indexed as ${result.id}`);
 };

@@ -3,6 +3,7 @@ import { mkdir, unlink, copyFile } from "node:fs/promises";
 import { parseEpub } from "./epub-parser.js";
 import { chunkChapters } from "./chunker.js";
 import { embedChunks } from "./embedder.js";
+import { embedChunksBatch } from "./batch-embedder.js";
 import { addChunksToIndex, deleteBookIndex } from "./vector-store.js";
 import { summarizeAllChapters } from "./summarizer.js";
 import { ensureDataDirs, logInfo, logWarn } from "./constants.js";
@@ -17,7 +18,7 @@ const formatDuration = (ms: number) => {
 export const ingestEpub = async (
   filePath: string,
   selectedChapterIndices?: number[],
-  options?: { summarize?: boolean }
+  options?: { summarize?: boolean; batch?: boolean }
 ) => {
   const bookId = randomUUID();
   const paths = await ensureDataDirs();
@@ -94,7 +95,8 @@ export const ingestEpub = async (
 
     const allChunks = [...chunks, ...adjustedSummaries];
     const embedStart = Date.now();
-    const embedded = await embedChunks(allChunks);
+    const embed = options?.batch ? embedChunksBatch : embedChunks;
+    const embedded = await embed(allChunks);
     logInfo(`[Ingest] Embedded ${embedded.length} total chunks (${formatDuration(Date.now() - embedStart)})`);
 
     await addChunksToIndex(bookId, embedded);

@@ -43,6 +43,8 @@ These are rough, model-dependent estimates for embeddings + optional summaries. 
 
 Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, and about ~$0.20 with summaries.
 
+Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete.
+
 ## Local dev
 
 ```bash
@@ -87,5 +89,6 @@ CLI overrides:
 - `--max-chapter <n>`
 - `--top-k <n>`
 - `--manual` (interactive chapter selection)
+- `--batch`
 - `--summary`
 - `--force`

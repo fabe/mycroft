@@ -7,8 +7,9 @@ export const registerBookIngest = (program: import("commander").Command) => {
     .argument("<path>", "Path to the EPUB file")
     .option("--manual", "Interactive chapter selection")
     .option("--summary", "Enable AI chapter summaries")
-    .action(async (path: string, options: { manual?: boolean; summary?: boolean }) => {
+    .option("--batch", "Use OpenAI Batch API for embeddings (50% cost savings, up to 24h)")
+    .action(async (path: string, options: { manual?: boolean; summary?: boolean; batch?: boolean }) => {
       const summarize = Boolean(options.summary);
-      await ingestCommand(path, { manual: options.manual, summarize });
+      await ingestCommand(path, { manual: options.manual, summarize, batch: options.batch });
     });
 };
