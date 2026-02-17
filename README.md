@@ -16,6 +16,8 @@ Ensure `node` is on your PATH (the CLI uses Node.js as its runtime).
 
 ## Usage
 
+Run `mycroft config onboard` first to set everything up, then use the book commands.
+
 ```bash
 mycroft book list
 mycroft book ingest /path/to/book.epub

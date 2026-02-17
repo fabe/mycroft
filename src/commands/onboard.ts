@@ -20,7 +20,7 @@ export const onboardCommand = async () => {
   const defaults = await loadConfig();
   const path = configPath();
 
-  stdout("\nEPUB RAG setup");
+  stdout("\nmycroft");
   stdout("Press Enter or type -y to accept defaults.");
 
   const dataDirInput = await prompt(`Data directory [${defaults.dataDir}]: `);
