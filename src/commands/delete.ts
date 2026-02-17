@@ -1,10 +1,10 @@
 import { unlink } from "node:fs/promises";
-import { deleteBook, getBook } from "../db/queries";
-import { resolveBookId } from "./utils";
-import { deleteBookIndex } from "../services/vector-store";
-import { ensureDataDirs } from "../services/constants";
-import { confirm } from "./prompt";
-import { isInteractive, stdout } from "./io";
+import { deleteBook, getBook } from "../db/queries.js";
+import { resolveBookId } from "./utils.js";
+import { deleteBookIndex } from "../services/vector-store.js";
+import { ensureDataDirs } from "../services/constants.js";
+import { confirm } from "./prompt.js";
+import { isInteractive, stdout } from "./io.js";
 
 export const deleteCommand = async (id: string, options: { force?: boolean }) => {
   await ensureDataDirs();

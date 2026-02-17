@@ -1,6 +1,6 @@
-import { ensureConfigDirs, configPath, loadConfig } from "../config";
+import { ensureConfigDirs, configPath, loadConfig } from "../config.js";
 import { mkdir, writeFile, access } from "node:fs/promises";
-import { stdout } from "./io";
+import { stdout } from "./io.js";
 
 export const initConfigCommand = async () => {
   const path = configPath();

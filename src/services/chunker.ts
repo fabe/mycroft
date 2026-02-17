@@ -1,5 +1,5 @@
-import type { Chapter, BookChunk } from "../shared/types";
-import { CHUNK_OVERLAP, CHUNK_SIZE, SEPARATORS } from "./constants";
+import type { Chapter, BookChunk } from "../shared/types.js";
+import { CHUNK_OVERLAP, CHUNK_SIZE, SEPARATORS } from "./constants.js";
 
 const splitRecursive = (text: string, separators: readonly string[]): string[] => {
   if (text.length <= CHUNK_SIZE || separators.length === 0) return [text];

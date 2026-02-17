@@ -1,4 +1,4 @@
-import { deleteCommand } from "../delete";
+import { deleteCommand } from "../delete.js";
 
 export const registerBookDelete = (program: import("commander").Command) => {
   program

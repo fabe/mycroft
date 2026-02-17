@@ -1,4 +1,4 @@
-import { ingestCommand } from "../ingest";
+import { ingestCommand } from "../ingest.js";
 
 export const registerBookIngest = (program: import("commander").Command) => {
   program

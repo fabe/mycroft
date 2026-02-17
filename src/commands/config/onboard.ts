@@ -1,4 +1,4 @@
-import { onboardCommand } from "../onboard";
+import { onboardCommand } from "../onboard.js";
 
 export const registerConfigOnboard = (program: import("commander").Command) => {
   program

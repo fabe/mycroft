@@ -1,7 +1,7 @@
 import { embedMany } from "ai";
 import { openai } from "@ai-sdk/openai";
-import type { BookChunk } from "../shared/types";
-import { getModels, logInfo } from "./constants";
+import type { BookChunk } from "../shared/types.js";
+import { getModels, logInfo } from "./constants.js";
 
 export type EmbeddedChunk = BookChunk & {
   vector: number[];

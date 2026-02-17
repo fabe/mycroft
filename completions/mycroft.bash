@@ -3,10 +3,11 @@ _mycroft() {
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-  local top_commands="book config"
+  local top_commands="book config chat"
   local global_flags="--help --version --data-dir"
   local book_commands="ingest list show ask search delete"
   local config_commands="path init resolve onboard"
+  local chat_commands="start ask list show repl"
 
   if [[ ${COMP_CWORD} -le 1 ]]; then
     COMPREPLY=( $(compgen -W "${top_commands} ${global_flags}" -- "${cur}") )
@@ -39,6 +40,26 @@ _mycroft() {
         COMPREPLY=( $(compgen -W "${config_commands} ${global_flags}" -- "${cur}") )
         return 0
       fi
+      ;;
+    chat)
+      if [[ ${COMP_CWORD} -eq 2 ]]; then
+        COMPREPLY=( $(compgen -W "${chat_commands} ${global_flags}" -- "${cur}") )
+        return 0
+      fi
+      case "${COMP_WORDS[2]}" in
+        ask|repl)
+          COMPREPLY=( $(compgen -W "--top-k --max-chapter" -- "${cur}") )
+          return 0
+          ;;
+        show)
+          COMPREPLY=( $(compgen -W "--tail" -- "${cur}") )
+          return 0
+          ;;
+        start)
+          COMPREPLY=( $(compgen -W "--title" -- "${cur}") )
+          return 0
+          ;;
+      esac
       ;;
   esac
 }

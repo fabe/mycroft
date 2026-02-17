@@ -1,10 +1,10 @@
 import { embed, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { getBook } from "../db/queries";
-import { resolveBookId } from "./utils";
-import { queryBookIndex } from "../services/vector-store";
-import { ensureDataDirs, getModels, isAskEnabled, requireOpenAIKey } from "../services/constants";
-import { handleSigint } from "./io";
+import { getBook } from "../db/queries.js";
+import { resolveBookId } from "./utils.js";
+import { queryBookIndex } from "../services/vector-store.js";
+import { ensureDataDirs, getModels, isAskEnabled, requireOpenAIKey } from "../services/constants.js";
+import { handleSigint } from "./io.js";
 
 const formatContext = (chunks: Array<{ content: string; chapterTitle: string; chapterIndex: number }>) =>
   chunks

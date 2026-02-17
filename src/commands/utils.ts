@@ -1,4 +1,4 @@
-import { getBooks } from "../db/queries";
+import { getBooks } from "../db/queries.js";
 
 export const resolveBookId = async (input: string): Promise<string | null> => {
   const books = await getBooks();

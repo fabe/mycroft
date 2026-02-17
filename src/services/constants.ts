@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
-import { loadConfig } from "../config";
-import { logInfo, logWarn } from "../commands/io";
+import { loadConfig } from "../config.js";
+import { logInfo, logWarn } from "../commands/io.js";
 
 export const CHUNK_SIZE: number = 1000;
 export const CHUNK_OVERLAP: number = 100;

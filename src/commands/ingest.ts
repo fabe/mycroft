@@ -1,9 +1,9 @@
-import { parseEpub } from "../services/epub-parser";
-import { ingestEpub } from "../services/ingest";
-import { ensureDataDirs, requireOpenAIKey } from "../services/constants";
+import { parseEpub } from "../services/epub-parser.js";
+import { ingestEpub } from "../services/ingest.js";
+import { ensureDataDirs, requireOpenAIKey } from "../services/constants.js";
 import { access } from "node:fs/promises";
-import { prompt } from "./prompt";
-import { isInteractive, stdout } from "./io";
+import { prompt } from "./prompt.js";
+import { isInteractive, stdout } from "./io.js";
 
 const parseIndexSelection = (input: string, max: number): number[] => {
   const trimmed = input.trim();

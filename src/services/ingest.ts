@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, unlink, copyFile } from "node:fs/promises";
-import { parseEpub } from "./epub-parser";
-import { chunkChapters } from "./chunker";
-import { embedChunks } from "./embedder";
-import { addChunksToIndex, deleteBookIndex } from "./vector-store";
-import { summarizeAllChapters } from "./summarizer";
-import { ensureDataDirs, logInfo, logWarn } from "./constants";
-import { deleteBook, insertBook, updateBook } from "../db/queries";
-import type { BookChunk } from "../shared/types";
+import { parseEpub } from "./epub-parser.js";
+import { chunkChapters } from "./chunker.js";
+import { embedChunks } from "./embedder.js";
+import { addChunksToIndex, deleteBookIndex } from "./vector-store.js";
+import { summarizeAllChapters } from "./summarizer.js";
+import { ensureDataDirs, logInfo, logWarn } from "./constants.js";
+import { deleteBook, insertBook, updateBook } from "../db/queries.js";
+import type { BookChunk } from "../shared/types.js";
 
 const formatDuration = (ms: number) => {
   const seconds = Math.round(ms / 100) / 10;

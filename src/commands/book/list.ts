@@ -1,4 +1,4 @@
-import { listCommand } from "../list";
+import { listCommand } from "../list.js";
 
 export const registerBookList = (program: import("commander").Command) => {
   program

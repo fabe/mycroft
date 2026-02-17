@@ -11,7 +11,7 @@ Use `mycroft` to ingest EPUBs, build a local vector index, and ask questions abo
 
 Setup (once)
 - `export OPENAI_API_KEY="..."`
-- `mycroft config init`
+- `mycroft config onboard`
 - `mycroft config resolve`
 
 Common commands
@@ -22,10 +22,14 @@ Common commands
 - Ask a question: `mycroft book ask <id> "What is the main conflict?"`
 - Search passages: `mycroft book search <id> "mad hatter" --top-k 5`
 - Delete book: `mycroft book delete <id> --force`
+- Start chat: `mycroft chat start <id>`
+- Ask in session: `mycroft chat ask <session> "What does this foreshadow?"`
+- Continue chat: `mycroft chat repl <session>`
 
 Notes
 - Use `mycroft config path` to find the config file location.
 - `book ask` and `book search` require embeddings and an `OPENAI_API_KEY`.
+- Chat commands require embeddings and an `OPENAI_API_KEY`.
 - Prefer `book search` and synthesize answers yourself before using `book ask`.
 - Summaries increase ingestion time and cost significantly; enable `--summary` only when needed.
 - For scripted runs, avoid interactive flags like `--manual` or omit confirmations with `--force`.

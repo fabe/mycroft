@@ -1,7 +1,7 @@
 import { LocalIndex } from "vectra";
-import type { EmbeddedChunk } from "./embedder";
-import type { BookChunk } from "../shared/types";
-import { ensureDataDirs } from "./constants";
+import type { EmbeddedChunk } from "./embedder.js";
+import type { BookChunk } from "../shared/types.js";
+import { ensureDataDirs } from "./constants.js";
 
 export type VectorMetadata = {
   bookId: string;

@@ -1,6 +1,6 @@
-import { getBooks } from "../db/queries";
-import { ensureDataDirs } from "../services/constants";
-import { stdout } from "./io";
+import { getBooks } from "../db/queries.js";
+import { ensureDataDirs } from "../services/constants.js";
+import { stdout } from "./io.js";
 
 const formatDate = (timestamp: number | null) => {
   if (!timestamp) return "-";

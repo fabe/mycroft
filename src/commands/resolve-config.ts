@@ -1,5 +1,5 @@
-import { configPath, loadConfig } from "../config";
-import { stdout } from "./io";
+import { configPath, loadConfig } from "../config.js";
+import { stdout } from "./io.js";
 
 export const resolveConfigCommand = async () => {
   const path = configPath();

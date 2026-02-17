@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { setConfigOverrides } from "./config";
-import { printError } from "./commands/io";
+import { setConfigOverrides } from "./config.js";
+import { printError } from "./commands/io.js";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { registerBookIngest } from "./commands/book/ingest";
-import { registerBookList } from "./commands/book/list";
-import { registerBookShow } from "./commands/book/show";
-import { registerBookAsk } from "./commands/book/ask";
-import { registerBookSearch } from "./commands/book/search";
-import { registerBookDelete } from "./commands/book/delete";
-import { registerConfigPath } from "./commands/config/path";
-import { registerConfigInit } from "./commands/config/init";
-import { registerConfigResolve } from "./commands/config/resolve";
-import { registerConfigOnboard } from "./commands/config/onboard";
+import { registerBookIngest } from "./commands/book/ingest.js";
+import { registerBookList } from "./commands/book/list.js";
+import { registerBookShow } from "./commands/book/show.js";
+import { registerBookAsk } from "./commands/book/ask.js";
+import { registerBookSearch } from "./commands/book/search.js";
+import { registerBookDelete } from "./commands/book/delete.js";
+import { registerConfigPath } from "./commands/config/path.js";
+import { registerConfigInit } from "./commands/config/init.js";
+import { registerConfigResolve } from "./commands/config/resolve.js";
+import { registerConfigOnboard } from "./commands/config/onboard.js";
+import { registerChatCommands } from "./commands/chat/index.js";
 
 const resolveVersion = async () => {
   try {
@@ -56,6 +57,8 @@ const registerCommands = () => {
   registerConfigInit(config);
   registerConfigResolve(config);
   registerConfigOnboard(config);
+
+  registerChatCommands(program);
 };
 
 program.exitOverride((error) => {

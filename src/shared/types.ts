@@ -37,3 +37,27 @@ export type ChapterSummary = {
   revelations: string;
   fullSummary: string;
 };
+
+export type ChatSession = {
+  id: string;
+  bookId: string;
+  title: string | null;
+  summary: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type ChatSessionSummary = ChatSession & {
+  bookTitle: string | null;
+};
+
+export type ChatMessageRole = "user" | "assistant";
+
+export type ChatMessage = {
+  id: string;
+  sessionId: string;
+  role: ChatMessageRole;
+  content: string;
+  tokenCount: number | null;
+  createdAt: number;
+};

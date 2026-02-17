@@ -1,4 +1,4 @@
-import { showCommand } from "../show";
+import { showCommand } from "../show.js";
 
 export const registerBookShow = (program: import("commander").Command) => {
   program

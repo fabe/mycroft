@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { handleSigint } from "./io";
+import { handleSigint } from "./io.js";
 
 export const prompt = async (question: string): Promise<string> => {
   const release = handleSigint();

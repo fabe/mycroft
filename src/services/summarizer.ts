@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import type { Chapter, ChapterSummary } from "../shared/types";
-import { SUMMARY_MAX_TOKENS, SUMMARY_CONCURRENCY, SUMMARY_TARGET_WORDS, getModels, logInfo, logWarn } from "./constants";
+import type { Chapter, ChapterSummary } from "../shared/types.js";
+import { SUMMARY_MAX_TOKENS, SUMMARY_CONCURRENCY, SUMMARY_TARGET_WORDS, getModels, logInfo, logWarn } from "./constants.js";
 
 const CHARS_PER_TOKEN = 4;
 

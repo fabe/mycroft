@@ -1,4 +1,5 @@
-import { askCommand } from "../ask";
+import { askCommand } from "../ask.js";
+import { parseQueryOptions } from "../query-options.js";
 
 export const registerBookAsk = (program: import("commander").Command) => {
   program
@@ -13,18 +14,7 @@ export const registerBookAsk = (program: import("commander").Command) => {
       question: string,
       options: { topK: string; maxChapter?: string }
     ) => {
-      const topK = Number(options.topK);
-      if (!Number.isFinite(topK) || topK <= 0) {
-        throw new Error("--top-k must be a positive number.");
-      }
-      let maxChapter: number | undefined;
-      if (options.maxChapter !== undefined) {
-        const parsed = Number(options.maxChapter);
-        if (!Number.isFinite(parsed) || parsed < 0) {
-          throw new Error("--max-chapter must be a non-negative number.");
-        }
-        maxChapter = parsed;
-      }
+      const { topK, maxChapter } = parseQueryOptions(options);
       await askCommand(id, question, { topK, maxChapter });
     });
 };

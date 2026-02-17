@@ -1,7 +1,7 @@
-import { getBook } from "../db/queries";
-import { resolveBookId } from "./utils";
-import { ensureDataDirs } from "../services/constants";
-import { stdout } from "./io";
+import { getBook } from "../db/queries.js";
+import { resolveBookId } from "./utils.js";
+import { ensureDataDirs } from "../services/constants.js";
+import { stdout } from "./io.js";
 
 export const showCommand = async (id: string) => {
   await ensureDataDirs();

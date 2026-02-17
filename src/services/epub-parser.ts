@@ -1,7 +1,7 @@
 import { initEpubFile } from "@lingo-reader/epub-parser";
 import { basename } from "node:path";
-import type { Chapter } from "../shared/types";
-import { logInfo } from "./constants";
+import type { Chapter } from "../shared/types.js";
+import { logInfo } from "./constants.js";
 
 export type ParsedBook = {
   title: string;

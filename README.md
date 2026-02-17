@@ -1,4 +1,4 @@
-# mycroft-cli
+# mycroft
 
 Command-line tool that ingests EPUB files, builds a local searchable index, and answers questions using a retrieval-augmented workflow.
 
@@ -16,12 +16,15 @@ Ensure `node` is on your PATH (the CLI uses Node.js as its runtime).
 
 ## Usage
 
-Run `mycroft config onboard` first to set everything up, then use the book commands.
+Run `mycroft config onboard` first to set everything up, then use the book and chat commands.
 
 ```bash
 mycroft book list
 mycroft book ingest /path/to/book.epub
 mycroft book ask <id> "What is the main conflict?"
+mycroft chat start <id>
+mycroft chat ask <session> "What does this foreshadow?"
+mycroft chat repl <session>
 mycroft config init
 mycroft config resolve
 mycroft config onboard

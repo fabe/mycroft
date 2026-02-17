@@ -1,4 +1,4 @@
-import { initConfigCommand } from "../init-config";
+import { initConfigCommand } from "../init-config.js";
 
 export const registerConfigInit = (program: import("commander").Command) => {
   program

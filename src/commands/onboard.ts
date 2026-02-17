@@ -1,7 +1,7 @@
-import { ensureConfigDirs, configPath, loadConfig } from "../config";
+import { ensureConfigDirs, configPath, loadConfig } from "../config.js";
 import { writeFile } from "node:fs/promises";
-import { prompt } from "./prompt";
-import { isInteractive, stdout } from "./io";
+import { prompt } from "./prompt.js";
+import { isInteractive, stdout } from "./io.js";
 
 const isDefault = (input: string) => input === "" || input.toLowerCase() === "-y";
 

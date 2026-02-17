@@ -1,12 +1,12 @@
 import Database from "better-sqlite3";
-import { resolvePaths } from "../services/constants";
+import { resolvePaths } from "../services/constants.js";
 
 const resolveDbPath = async () => {
   const paths = await resolvePaths();
   return paths.dbPath;
 };
 
-export const createDb = async (): Promise<Database> => {
+export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   const db = new Database(await resolveDbPath());
 
   db.exec(`
@@ -23,6 +23,30 @@ export const createDb = async (): Promise<Database> => {
       progress_chapter INTEGER
     );
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      title TEXT,
+      summary TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      updated_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      token_count INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+  `);
+
+  db.exec("CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id, created_at)");
 
   const columns = db
     .prepare("PRAGMA table_info(books)")

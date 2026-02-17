@@ -1,4 +1,4 @@
-import { configCommand } from "../config";
+import { configCommand } from "../config.js";
 
 export const registerConfigPath = (program: import("commander").Command) => {
   program
