@@ -1,4 +1,4 @@
-# EPUB RAG CLI
+# mycroft-cli
 
 Command-line tool that ingests EPUB files, builds a local searchable index, and answers questions using a retrieval-augmented workflow.
 
@@ -23,20 +23,6 @@ mycroft book ask <id> "What is the main conflict?"
 mycroft config init
 mycroft config resolve
 mycroft config onboard
-```
-
-## Shell completions
-
-```bash
-source completions/mycroft.bash
-```
-
-```zsh
-source completions/mycroft.zsh
-```
-
-```fish
-source completions/mycroft.fish
 ```
 
 ## Local dev
