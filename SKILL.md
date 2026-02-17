@@ -1,7 +1,7 @@
 ---
-name: mycroft-cli
+name: mycroft
 description: EPUB ingestion, local vector index, and Q&A CLI for books.
-homepage: https://github.com/fabe/mycroft-cli
+homepage: https://github.com/fabe/mycroft
 metadata: {"clawdbot":{"emoji":"📚","requires":{"bins":["mycroft"],"env":["OPENAI_API_KEY"]},"install":[{"id":"npm","kind":"npm","package":"@fs/mycroft","bins":["mycroft"],"label":"Install mycroft (npm)"}]}}
 ---
 

@@ -6,6 +6,11 @@
   "bin": {
     "mycroft": "./bin/mycroft.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fabe/mycroft.git"
+  },
+  "homepage": "https://github.com/fabe/mycroft",
   "files": [
     "bin",
     "dist",
