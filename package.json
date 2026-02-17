@@ -1,6 +1,7 @@
 {
   "name": "@fs/mycroft",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "mycroft": "./bin/mycroft.js"
@@ -9,6 +10,7 @@
     "bin",
     "dist",
     "README.md",
+    "LICENSE",
     "completions"
   ],
   "publishConfig": {
