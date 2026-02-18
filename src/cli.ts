@@ -66,7 +66,10 @@ const registerCommands = () => {
 };
 
 program.exitOverride((error) => {
-  if (error.code === "commander.helpDisplayed") {
+  if (
+    error.code === "commander.helpDisplayed" ||
+    error.code === "commander.version"
+  ) {
     process.exit(0);
   }
   throw error;
