@@ -11,6 +11,7 @@ import { registerBookShow } from "./commands/book/show.js";
 import { registerBookAsk } from "./commands/book/ask.js";
 import { registerBookSearch } from "./commands/book/search.js";
 import { registerBookDelete } from "./commands/book/delete.js";
+import { registerBookResume } from "./commands/book/resume.js";
 import { registerConfigPath } from "./commands/config/path.js";
 import { registerConfigInit } from "./commands/config/init.js";
 import { registerConfigResolve } from "./commands/config/resolve.js";
@@ -45,12 +46,13 @@ const configureProgram = async () => {
 
 const registerCommands = () => {
   const book = program.command("book").description("Manage books and queries");
-  registerBookIngest(book);
+  const ingest = registerBookIngest(book);
   registerBookList(book);
   registerBookShow(book);
   registerBookAsk(book);
   registerBookSearch(book);
   registerBookDelete(book);
+  registerBookResume(book, ingest);
 
   const config = program.command("config").description("Manage configuration");
   registerConfigPath(config);

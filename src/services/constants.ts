@@ -14,6 +14,7 @@ export type ResolvedPaths = {
   dataDir: string;
   booksDir: string;
   vectorsDir: string;
+  ingestDir: string;
   dbPath: string;
 };
 
@@ -24,6 +25,7 @@ export const resolvePaths = async (): Promise<ResolvedPaths> => {
     dataDir,
     booksDir: `${dataDir}/books`,
     vectorsDir: `${dataDir}/vectors`,
+    ingestDir: `${dataDir}/ingest`,
     dbPath: `${dataDir}/metadata.db`,
   };
 };
@@ -33,6 +35,7 @@ export const ensureDataDirs = async () => {
   await mkdir(paths.dataDir, { recursive: true });
   await mkdir(paths.booksDir, { recursive: true });
   await mkdir(paths.vectorsDir, { recursive: true });
+  await mkdir(paths.ingestDir, { recursive: true });
   return paths;
 };
 

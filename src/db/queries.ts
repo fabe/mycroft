@@ -4,7 +4,7 @@ import { createDb } from "./schema.js";
 
 export type BookInsert = Omit<
   BookRecord,
-  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex"
+  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "ingestState" | "ingestResumePath"
 > & {
   chunkCount?: number;
   indexedAt?: number | null;
@@ -12,6 +12,11 @@ export type BookInsert = Omit<
   summaries?: string;
   narrativeStartIndex?: number | null;
   narrativeEndIndex?: number | null;
+  batchId?: string | null;
+  batchFileId?: string | null;
+  batchChunks?: string | null;
+  ingestState?: string | null;
+  ingestResumePath?: string | null;
 };
 
 const mapRow = (row: any): BookRecord => ({
@@ -27,6 +32,10 @@ const mapRow = (row: any): BookRecord => ({
   progressChapter: row.progress_chapter ?? null,
   narrativeStartIndex: row.narrative_start_index ?? null,
   narrativeEndIndex: row.narrative_end_index ?? null,
+  batchId: row.batch_id ?? null,
+  batchFileId: row.batch_file_id ?? null,
+  ingestState: row.ingest_state ?? null,
+  ingestResumePath: row.ingest_resume_path ?? null,
 });
 
 let dbPromise: Promise<ReturnType<typeof Database>> | null = null;
@@ -107,6 +116,26 @@ export const updateBook = async (id: string, updates: Partial<BookInsert>) => {
     fields.push("narrative_end_index = @narrativeEndIndex");
     params.narrativeEndIndex = updates.narrativeEndIndex;
   }
+  if (updates.batchId !== undefined) {
+    fields.push("batch_id = @batchId");
+    params.batchId = updates.batchId;
+  }
+  if (updates.batchFileId !== undefined) {
+    fields.push("batch_file_id = @batchFileId");
+    params.batchFileId = updates.batchFileId;
+  }
+  if (updates.batchChunks !== undefined) {
+    fields.push("batch_chunks = @batchChunks");
+    params.batchChunks = updates.batchChunks;
+  }
+  if (updates.ingestState !== undefined) {
+    fields.push("ingest_state = @ingestState");
+    params.ingestState = updates.ingestState;
+  }
+  if (updates.ingestResumePath !== undefined) {
+    fields.push("ingest_resume_path = @ingestResumePath");
+    params.ingestResumePath = updates.ingestResumePath;
+  }
 
   if (fields.length === 0) return;
 
@@ -124,6 +153,12 @@ export const getBook = async (id: string): Promise<BookRecord | null> => {
   const db = await getDb();
   const row = db.prepare("SELECT * FROM books WHERE id = ?").get(id);
   return row ? mapRow(row) : null;
+};
+
+export const getBookBatchChunks = async (id: string): Promise<string | null> => {
+  const db = await getDb();
+  const row = db.prepare("SELECT batch_chunks FROM books WHERE id = ?").get(id) as { batch_chunks?: string } | undefined;
+  return row?.batch_chunks ?? null;
 };
 
 export const deleteBook = async (id: string) => {

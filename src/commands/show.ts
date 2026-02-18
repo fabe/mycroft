@@ -21,6 +21,7 @@ export const showCommand = async (id: string) => {
   stdout(`Indexed: ${book.indexedAt ? new Date(book.indexedAt).toISOString() : "-"}`);
   stdout(`Narrative range: ${book.narrativeStartIndex ?? 0} to ${book.narrativeEndIndex ?? book.chapters.length - 1}`);
   stdout(`Progress chapter: ${book.progressChapter ?? "-"}`);
+  stdout(`Ingest status: ${book.ingestState ?? "-"}`);
   stdout("\nChapters:");
 
   book.chapters.forEach((title: string, index: number) => {
