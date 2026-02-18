@@ -22,7 +22,7 @@ Run `mycroft config onboard` first to set everything up, then use the book and c
 mycroft book list
 mycroft book ingest /path/to/book.epub
 mycroft book ingest /path/to/book.epub --batch
-mycroft book resume <id>
+mycroft book ingest resume <id>
 mycroft book ask <id> "What is the main conflict?"
 mycroft chat start <id>
 mycroft chat ask <session> "What does this foreshadow?"
@@ -45,7 +45,7 @@ These are rough, model-dependent estimates for embeddings + optional summaries. 
 
 Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, and about ~$0.20 with summaries.
 
-Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job. Use `mycroft book resume <id>` to check status and complete ingestion once the batch finishes.
+Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job. Use `mycroft book ingest resume <id>` to check status and complete ingestion once the batch finishes.
 
 ## Local dev
 

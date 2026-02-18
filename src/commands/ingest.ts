@@ -67,7 +67,7 @@ export const ingestCommand = async (filePath: string, options: { manual?: boolea
   const result = await ingestEpub(filePath, selectedChapterIndices, { summarize: options.summarize ?? false, batch: options.batch ?? false });
   if (options.batch) {
     stdout(`\nBatch submitted. Book registered as ${result.id}`);
-    stdout(`Run "mycroft book resume ${result.id.slice(0, 8)}" to complete ingestion once the batch finishes.`);
+    stdout(`Use "mycroft book ingest resume ${result.id.slice(0, 8)}" to complete ingestion once the batch finishes.`);
   } else {
     stdout(`\nDone. Book indexed as ${result.id}`);
   }

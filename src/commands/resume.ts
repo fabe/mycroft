@@ -25,12 +25,12 @@ export const resumeCommand = async (id: string) => {
   }
 
   if (!book.batchId) {
-    throw new Error(`Book "${book.title}" has no pending batch. Re-ingest with --batch to start one.`);
+    throw new Error(`Book "${book.title}" has no pending batch. Re-ingest with "mycroft book ingest --batch" to start one.`);
   }
 
   const rawChunks = await getBookBatchChunks(resolvedId);
   if (!rawChunks) {
-    throw new Error(`No stored chunks found for book "${book.title}". Re-ingest with --batch.`);
+    throw new Error(`No stored chunks found for book "${book.title}". Re-ingest with "mycroft book ingest --batch".`);
   }
 
   const chunks: BookChunk[] = JSON.parse(rawChunks);

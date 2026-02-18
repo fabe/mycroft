@@ -103,7 +103,7 @@ export const ingestEpub = async (
         batchFileId: inputFileId,
         batchChunks: JSON.stringify(allChunks),
       });
-      logInfo(`[Ingest] Batch submitted (${batchId}). Run "mycroft book resume ${bookId.slice(0, 8)}" to complete ingestion.`);
+      logInfo(`[Ingest] Batch submitted (${batchId}). Run "mycroft book ingest resume ${bookId.slice(0, 8)}" to complete ingestion.`);
     } else {
       const embedStart = Date.now();
       const embedded = await embedChunks(allChunks);

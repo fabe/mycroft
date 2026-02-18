@@ -46,13 +46,13 @@ const configureProgram = async () => {
 
 const registerCommands = () => {
   const book = program.command("book").description("Manage books and queries");
-  registerBookIngest(book);
+  const ingest = registerBookIngest(book);
   registerBookList(book);
   registerBookShow(book);
   registerBookAsk(book);
   registerBookSearch(book);
   registerBookDelete(book);
-  registerBookResume(book);
+  registerBookResume(book, ingest);
 
   const config = program.command("config").description("Manage configuration");
   registerConfigPath(config);
