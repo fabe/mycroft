@@ -4,11 +4,12 @@ import { parseEpub } from "./epub-parser.js";
 import { chunkChapters } from "./chunker.js";
 import { embedChunks } from "./embedder.js";
 import { submitBatchEmbeddings } from "./batch-embedder.js";
+import { submitBatchSummaries } from "./batch-summarizer.js";
 import { addChunksToIndex, deleteBookIndex } from "./vector-store.js";
 import { summarizeAllChapters } from "./summarizer.js";
 import { ensureDataDirs, logInfo, logWarn } from "./constants.js";
 import { deleteBook, insertBook, updateBook } from "../db/queries.js";
-import type { BookChunk } from "../shared/types.js";
+import type { BookChunk, Chapter } from "../shared/types.js";
 import type { EmbeddedChunk } from "./embedder.js";
 
 type ResumeState = {
@@ -97,10 +98,10 @@ export const ingestEpub = async (
     logInfo(`[Ingest] Processing ${chaptersToProcess.length} selected chapters (indices: ${selectedIndices.join(", ")})`);
 
     let adjustedSummaries: BookChunk[] = [];
-    if (options?.summarize !== false) {
+    if (options?.summarize !== false && !options?.batch) {
       logInfo(`[Ingest] Generating summaries for ${chaptersToProcess.length} chapters...`);
       const summarizeStart = Date.now();
-      const summaries = await summarizeAllChapters(chaptersToProcess, { batch: options?.batch });
+      const summaries = await summarizeAllChapters(chaptersToProcess);
       logInfo(`[Ingest] Generated ${summaries.length}/${chaptersToProcess.length} summaries (${formatDuration(Date.now() - summarizeStart)})`);
 
       const summaryRecords = summaries.map((s, idx) => ({
@@ -130,18 +131,30 @@ export const ingestEpub = async (
     const chunks = chunkChapters(bookId, chunksToProcess).filter((chunk) => chunk.content.length > 0);
     logInfo(`[Ingest] Created ${chunks.length} chunks from selected chapters`);
 
-    const allChunks = [...chunks, ...adjustedSummaries];
-
     if (options?.batch) {
-      logInfo(`[Ingest] Submitting ${allChunks.length} chunks to OpenAI Batch API`);
-      const { batchId, inputFileId } = await submitBatchEmbeddings(allChunks);
-      await updateBook(bookId, {
-        batchId,
-        batchFileId: inputFileId,
-        batchChunks: JSON.stringify(allChunks),
-      });
-      logInfo(`[Ingest] Batch submitted (${batchId}). Run "mycroft book ingest resume ${bookId.slice(0, 8)}" to complete ingestion.`);
+      if (options?.summarize !== false) {
+        // Batch mode with summaries: submit summary batch first, embedding batch later on resume
+        logInfo(`[Ingest] Submitting ${chaptersToProcess.length} chapters for batch summarization`);
+        const { batchId: summaryBatchId, inputFileId: summaryFileId, metadata } = await submitBatchSummaries(chaptersToProcess);
+        await updateBook(bookId, {
+          summaryBatchId,
+          summaryBatchFileId: summaryFileId,
+          summaryBatchChapters: JSON.stringify({ chapters: chaptersToProcess, metadata, selectedIndices, textChunks: chunks }),
+        });
+        logInfo(`[Ingest] Summary batch submitted (${summaryBatchId}). Use "mycroft book ingest status ${bookId.slice(0, 8)}" or "mycroft book ingest resume ${bookId.slice(0, 8)}".`);
+      } else {
+        // Batch mode without summaries: submit embedding batch directly
+        logInfo(`[Ingest] Submitting ${chunks.length} chunks to OpenAI Batch API`);
+        const { batchId, inputFileId } = await submitBatchEmbeddings(chunks);
+        await updateBook(bookId, {
+          batchId,
+          batchFileId: inputFileId,
+          batchChunks: JSON.stringify(chunks),
+        });
+        logInfo(`[Ingest] Batch submitted (${batchId}). Use "mycroft book ingest status ${bookId.slice(0, 8)}" or "mycroft book ingest resume ${bookId.slice(0, 8)}".`);
+      }
     } else {
+      const allChunks = [...chunks, ...adjustedSummaries];
       const embedStart = Date.now();
       resumePath = await persistResumeState(bookId, { chunks: allChunks, resumeIndex: 0 });
       const embedded = await embedChunks(allChunks, {
@@ -164,7 +177,7 @@ export const ingestEpub = async (
   } catch (error) {
     logWarn(`[Ingest] Error during chunking/embedding: ${error instanceof Error ? error.message : String(error)}`);
     if (resumePath) {
-      logWarn(`[Ingest] Partial progress saved. Run "mycroft book ingest resume ${bookId.slice(0, 8)}" to continue.`);
+      logWarn(`[Ingest] Partial progress saved. Use "mycroft book ingest status ${bookId.slice(0, 8)}" or "mycroft book ingest resume ${bookId.slice(0, 8)}".`);
       return { id: bookId, status: "interrupted" as const };
     } else {
       await deleteBookIndex(bookId);
@@ -181,7 +194,7 @@ export const ingestEpub = async (
 export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], batchId: string, batchFileId: string) => {
   const { checkBatchStatus, downloadBatchResults, cleanupBatchFiles } = await import("./batch-embedder.js");
 
-  logInfo(`[Resume] Checking batch ${batchId} for book ${bookId}`);
+  logInfo(`[Resume] Checking embedding batch ${batchId} for book ${bookId}`);
   const status = await checkBatchStatus(batchId);
 
   logInfo(`[Resume] Batch status: ${status.status} (completed: ${status.completed}/${status.total})`);
@@ -202,8 +215,21 @@ export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], ba
     return { status: "resubmitted" as const, batchId: newBatchId };
   }
 
-  if (status.status !== "completed" || !status.outputFileId) {
+  if (status.status !== "completed") {
     throw new Error(`Unexpected batch status: ${status.status}`);
+  }
+
+  // Batch completed but all requests failed — no output file
+  if (!status.outputFileId) {
+    logWarn(`[Resume] Batch ${batchId} completed but produced no output (${status.failed}/${status.total} failed). Re-submitting...`);
+    await cleanupBatchFiles(batchFileId, null);
+
+    const { submitBatchEmbeddings } = await import("./batch-embedder.js");
+    const { batchId: newBatchId, inputFileId: newFileId } = await submitBatchEmbeddings(storedChunks);
+
+    await updateBook(bookId, { batchId: newBatchId, batchFileId: newFileId });
+    logInfo(`[Resume] New batch submitted (${newBatchId}). Run resume again later.`);
+    return { status: "resubmitted" as const, batchId: newBatchId };
   }
 
   const embedded = await downloadBatchResults(status.outputFileId, storedChunks);
@@ -223,6 +249,184 @@ export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], ba
   await cleanupBatchFiles(batchFileId, status.outputFileId);
 
   return { status: "completed" as const };
+};
+
+export const resumeSummaryBatch = async (
+  bookId: string,
+  summaryBatchId: string,
+  summaryBatchFileId: string,
+  storedData: { chapters: Chapter[]; metadata: import("./batch-summarizer.js").SummaryBatchChapter[]; selectedIndices: number[]; textChunks: BookChunk[] },
+) => {
+  const { checkBatchStatus, cleanupBatchFiles } = await import("./batch-embedder.js");
+  const { downloadBatchSummaryResults, submitMergePass, downloadMergeResults } = await import("./batch-summarizer.js");
+
+  logInfo(`[Resume] Checking summary batch ${summaryBatchId} for book ${bookId}`);
+  const status = await checkBatchStatus(summaryBatchId);
+
+  logInfo(`[Resume] Summary batch status: ${status.status} (completed: ${status.completed}/${status.total})`);
+
+  if (["validating", "in_progress", "finalizing"].includes(status.status)) {
+    return { status: status.status as "validating" | "in_progress" | "finalizing", completed: status.completed, total: status.total, phase: "summary" as const };
+  }
+
+  if (status.status === "failed" || status.status === "expired" || status.status === "cancelled") {
+    logWarn(`[Resume] Summary batch ${summaryBatchId} ended with status "${status.status}". Re-submitting...`);
+    await cleanupBatchFiles(summaryBatchFileId, status.outputFileId);
+
+    const { submitBatchSummaries } = await import("./batch-summarizer.js");
+    const { batchId: newBatchId, inputFileId: newFileId, metadata: newMetadata } = await submitBatchSummaries(storedData.chapters);
+
+    await updateBook(bookId, {
+      summaryBatchId: newBatchId,
+      summaryBatchFileId: newFileId,
+      summaryBatchChapters: JSON.stringify({ ...storedData, metadata: newMetadata }),
+    });
+    logInfo(`[Resume] New summary batch submitted (${newBatchId}).`);
+    return { status: "resubmitted" as const, batchId: newBatchId, phase: "summary" as const };
+  }
+
+  if (status.status !== "completed") {
+    throw new Error(`Unexpected summary batch status: ${status.status}`);
+  }
+
+  // Batch completed but all requests failed — no output file
+  if (!status.outputFileId) {
+    logWarn(`[Resume] Summary batch ${summaryBatchId} completed but produced no output (${status.failed}/${status.total} failed). Re-submitting...`);
+    await cleanupBatchFiles(summaryBatchFileId, null);
+
+    const { submitBatchSummaries } = await import("./batch-summarizer.js");
+    const { batchId: newBatchId, inputFileId: newFileId, metadata: newMetadata } = await submitBatchSummaries(storedData.chapters);
+
+    await updateBook(bookId, {
+      summaryBatchId: newBatchId,
+      summaryBatchFileId: newFileId,
+      summaryBatchChapters: JSON.stringify({ ...storedData, metadata: newMetadata }),
+    });
+    logInfo(`[Resume] New summary batch submitted (${newBatchId}).`);
+    return { status: "resubmitted" as const, batchId: newBatchId, phase: "summary" as const };
+  }
+
+  // Download summary results
+  let { summaries, needsMergePass } = await downloadBatchSummaryResults(
+    status.outputFileId,
+    storedData.chapters,
+    storedData.metadata,
+  );
+  await cleanupBatchFiles(summaryBatchFileId, status.outputFileId);
+
+  // Handle two-pass chapters that need a merge
+  if (needsMergePass.length > 0) {
+    logInfo(`[Resume] ${needsMergePass.length} chapters need merge pass, submitting merge batch...`);
+    const mergeResult = await submitMergePass(needsMergePass);
+
+    // Store merge batch and wait for next resume
+    await updateBook(bookId, {
+      summaryBatchId: mergeResult.batchId,
+      summaryBatchFileId: mergeResult.inputFileId,
+      summaryBatchChapters: JSON.stringify({
+        ...storedData,
+        metadata: mergeResult.metadata,
+        completedSummaries: summaries,
+        isMergePass: true,
+      }),
+    });
+
+    return { status: "merge_submitted" as const, batchId: mergeResult.batchId, phase: "summary" as const };
+  }
+
+  // All summaries are ready — build summary chunks and submit embedding batch
+  return await finalizeSummariesAndSubmitEmbeddings(bookId, summaries, storedData);
+};
+
+export const resumeMergeBatch = async (
+  bookId: string,
+  summaryBatchId: string,
+  summaryBatchFileId: string,
+  storedData: {
+    chapters: Chapter[];
+    metadata: import("./batch-summarizer.js").SummaryBatchChapter[];
+    selectedIndices: number[];
+    textChunks: BookChunk[];
+    completedSummaries: import("../shared/types.js").ChapterSummary[];
+    isMergePass: true;
+  },
+) => {
+  const { checkBatchStatus, cleanupBatchFiles } = await import("./batch-embedder.js");
+  const { downloadMergeResults } = await import("./batch-summarizer.js");
+
+  logInfo(`[Resume] Checking merge batch ${summaryBatchId} for book ${bookId}`);
+  const status = await checkBatchStatus(summaryBatchId);
+
+  logInfo(`[Resume] Merge batch status: ${status.status} (completed: ${status.completed}/${status.total})`);
+
+  if (["validating", "in_progress", "finalizing"].includes(status.status)) {
+    return { status: status.status as "validating" | "in_progress" | "finalizing", completed: status.completed, total: status.total, phase: "summary" as const };
+  }
+
+  if (status.status !== "completed") {
+    throw new Error(`Unexpected merge batch status: ${status.status}`);
+  }
+
+  if (!status.outputFileId) {
+    throw new Error(`Merge batch completed but produced no output (${status.failed}/${status.total} failed). Re-ingest to start over.`);
+  }
+
+  const mergedSummaries = await downloadMergeResults(
+    status.outputFileId,
+    storedData.metadata.map((m) => ({ chapterIndex: m.chapterIndex, title: m.title })),
+  );
+  await cleanupBatchFiles(summaryBatchFileId, status.outputFileId);
+
+  // Combine previously completed single-pass summaries with the merged two-pass summaries
+  const allSummaries = [...(storedData.completedSummaries || []), ...mergedSummaries];
+
+  return await finalizeSummariesAndSubmitEmbeddings(bookId, allSummaries, storedData);
+};
+
+const finalizeSummariesAndSubmitEmbeddings = async (
+  bookId: string,
+  summaries: import("../shared/types.js").ChapterSummary[],
+  storedData: { selectedIndices: number[]; textChunks: BookChunk[] },
+) => {
+  const { submitBatchEmbeddings } = await import("./batch-embedder.js");
+
+  // Adjust chapter indices and store summaries
+  const summaryRecords = summaries.map((s) => ({
+    ...s,
+    chapterIndex: storedData.selectedIndices[s.chapterIndex] ?? s.chapterIndex,
+  }));
+
+  await updateBook(bookId, {
+    summaries: JSON.stringify(summaryRecords),
+  });
+
+  const summaryChunks: BookChunk[] = summaryRecords.map((s) => ({
+    id: `${bookId}-summary-${s.chapterIndex}`,
+    bookId,
+    chapterIndex: s.chapterIndex,
+    chapterTitle: s.chapterTitle,
+    chunkIndex: -1,
+    content: s.fullSummary,
+    type: "summary" as const,
+  }));
+  logInfo(`[Resume] Created ${summaryChunks.length} summary chunks from ${summaries.length} summaries`);
+
+  // Submit embedding batch for text chunks + summary chunks
+  const allChunks = [...storedData.textChunks, ...summaryChunks];
+  logInfo(`[Resume] Submitting ${allChunks.length} chunks for batch embedding`);
+  const { batchId, inputFileId } = await submitBatchEmbeddings(allChunks);
+
+  await updateBook(bookId, {
+    summaryBatchId: null,
+    summaryBatchFileId: null,
+    summaryBatchChapters: null,
+    batchId,
+    batchFileId: inputFileId,
+    batchChunks: JSON.stringify(allChunks),
+  });
+
+  logInfo(`[Resume] Embedding batch submitted (${batchId}). Run resume again when batch completes.`);
+  return { status: "embeddings_submitted" as const, batchId, phase: "embedding" as const };
 };
 
 export const resumeLocalIngest = async (bookId: string, resumePath: string, currentChunkCount: number) => {

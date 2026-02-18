@@ -18,6 +18,8 @@ node dist/cli.js --help
 mycroft config onboard
 mycroft book ingest /path/to/book.epub
 mycroft book ingest /path/to/book.epub --batch
+mycroft book ingest /path/to/book.epub --batch --summary
+mycroft book ingest status <id>
 mycroft book ingest resume <id>
 mycroft book ask <id> "What is the main conflict?"
 mycroft chat start <id>
@@ -57,9 +59,10 @@ mycroft chat repl <session>
 
 ## Notes
 
-- `--batch` runs embeddings via the OpenAI Batch API; batch ingests return immediately.
-- When `--batch` is enabled, chapter summaries (if used) run sequentially to reduce concurrency.
-- Use `mycroft book ingest resume <id>` to complete batch ingests or recover interrupted local ingests.
+- `--batch` runs both embeddings and summaries via the OpenAI Batch API; batch ingests return immediately.
+- When `--batch --summary` is used, the summary batch runs first. On resume, summary results are processed and an embedding batch is submitted.
+- Use `mycroft book ingest status <id>` to check batch progress without resuming.
+- Use `mycroft book ingest resume <id>` to advance to the next phase or complete batch ingests.
 
 ## Tests
 

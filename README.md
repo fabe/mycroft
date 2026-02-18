@@ -21,7 +21,10 @@ Run `mycroft config onboard` first to set everything up, then use the book and c
 ```bash
 mycroft book list
 mycroft book ingest /path/to/book.epub
+mycroft book ingest /path/to/book.epub --summary
 mycroft book ingest /path/to/book.epub --batch
+mycroft book ingest /path/to/book.epub --batch --summary
+mycroft book ingest status <id>
 mycroft book ingest resume <id>
 mycroft book ask <id> "What is the main conflict?"
 mycroft chat start <id>
@@ -36,16 +39,18 @@ mycroft config onboard
 
 These are rough, model-dependent estimates for embeddings + optional summaries. Costs vary by model pricing and book structure. Use this as a directional guide only. Summarization estimates assume `gpt-5-nano` and embeddings assume `text-embedding-3-small`.
 
-| Book size | Example | No summaries | With summaries |
-| --- | --- | --- | --- |
-| Small | 200-300 pages | ~$0.002-$0.004 | ~$0.04-$0.08 |
-| Average novel | 350-450 pages | ~$0.004-$0.006 | ~$0.08-$0.15 |
-| Large novel | 600-800 pages | ~$0.007-$0.01 | ~$0.15-$0.25 |
-| Trilogy | 1,500-2,000 pages | ~$0.02-$0.03 | ~$0.30-$0.60 |
+| Book size | Example | No summaries | With summaries | With summaries (batched) |
+| --- | --- | --- | --- | --- |
+| Small | 200-300 pages | ~$0.002-$0.004 | ~$0.04-$0.08 | ~$0.02-$0.04 |
+| Average novel | 350-450 pages | ~$0.004-$0.006 | ~$0.08-$0.15 | ~$0.04-$0.08 |
+| Large novel | 600-800 pages | ~$0.007-$0.01 | ~$0.15-$0.25 | ~$0.08-$0.13 |
+| Trilogy | 1,500-2,000 pages | ~$0.02-$0.03 | ~$0.30-$0.60 | ~$0.15-$0.30 |
 
-Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, and about ~$0.20 with summaries.
+Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, ~$0.20 with summaries, or ~$0.10 with summaries batched.
 
-Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job, and chapter summaries (if enabled) run sequentially to reduce concurrency. Use `mycroft book ingest resume <id>` to check status and complete ingestion once the batch finishes. If a non-batch ingest is interrupted, use the same resume command to continue without re-embedding completed chunks.
+Use `--summary` to generate per-chapter summaries during ingestion. Summaries improve retrieval quality but are significantly more expensive than embeddings alone (see cost table above). Without `--summary`, ingestion only generates embeddings, which is fast and cheap.
+
+Use `--batch` to cut costs by 50% via the OpenAI Batch API. This applies to both embeddings and summaries. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job. When combined with `--summary`, the summary batch runs first; once complete, run `resume` to submit the embedding batch. Use `mycroft book ingest status <id>` to check progress, and `mycroft book ingest resume <id>` to advance to the next phase. If a non-batch ingest is interrupted, use the same resume command to continue without re-embedding completed chunks.
 
 ## Local dev
 

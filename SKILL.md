@@ -19,7 +19,9 @@ Common commands
 - Ingest EPUB: `mycroft book ingest /path/to/book.epub`
 - Ingest with summaries: `mycroft book ingest /path/to/book.epub --summary`
 - Ingest with batch embeddings (50% cheaper): `mycroft book ingest /path/to/book.epub --batch`
+- Ingest with batch summaries + embeddings: `mycroft book ingest /path/to/book.epub --batch --summary`
 - Resume batch ingestion: `mycroft book ingest resume <id>`
+- Check ingestion status: `mycroft book ingest status <id>`
 - Show metadata: `mycroft book show <id>`
 - Ask a question: `mycroft book ask <id> "What is the main conflict?"`
 - Search passages: `mycroft book search <id> "mad hatter" --top-k 5`
@@ -34,8 +36,8 @@ Notes
 - Chat commands require embeddings and an `OPENAI_API_KEY`.
 - Prefer `book search` and synthesize answers yourself before using `book ask`.
 - Summaries increase ingestion time and cost significantly; enable `--summary` only when needed.
-- Use `--batch` to run embeddings via the OpenAI Batch API at 50% cost; results may take up to 24 hours, and summaries (if enabled) run sequentially.
-- After `--batch` ingestion, use `mycroft book ingest resume <id>` to check status and complete indexing.
+- Use `--batch` to run embeddings and summaries via the OpenAI Batch API at 50% cost; results may take up to 24 hours. When combined with `--summary`, summaries are batched first, then embeddings on resume.
+- After `--batch` ingestion, use `mycroft book ingest status <id>` to check progress and `mycroft book ingest resume <id>` to complete indexing.
 - If a non-batch ingest is interrupted, use `mycroft book ingest resume <id>` to continue from the last saved chunk.
 - If a batch fails, `resume` automatically re-submits it.
 - For scripted runs, avoid interactive flags like `--manual` or omit confirmations with `--force`.

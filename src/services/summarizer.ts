@@ -59,7 +59,6 @@ const summarizeSection = async (text: string, title: string, sectionNum: number)
   const { text: summary } = await generateText({
     model: openai(models.summary),
     prompt: `Summarize this section from chapter "${title}" (Part ${sectionNum}). Focus on key events, characters, and revelations. Keep it concise (100-150 words):\n\n${text}`,
-    temperature: 0.3,
   });
 
   return summary;
@@ -75,7 +74,6 @@ const generateStructuredSummary = async (
     const { text } = await generateText({
       model: openai(models.summary),
       prompt: SUMMARY_PROMPT(title, chapterIndex + 1, content),
-      temperature: 0.3,
     });
 
     let jsonText = text.trim();
@@ -145,17 +143,15 @@ export const summarizeChapter = async (
 
 export const summarizeAllChapters = async (
   chapters: Chapter[],
-  options?: { batch?: boolean }
 ): Promise<ChapterSummary[]> => {
   const summaries: ChapterSummary[] = [];
-  const concurrency = options?.batch ? 1 : SUMMARY_CONCURRENCY;
 
   logInfo(
-    `[Summarizer] Starting summarization of ${chapters.length} chapters (concurrency: ${concurrency}${options?.batch ? ", batch mode" : ""})`
+    `[Summarizer] Starting summarization of ${chapters.length} chapters (concurrency: ${SUMMARY_CONCURRENCY})`
   );
 
-  for (let i = 0; i < chapters.length; i += concurrency) {
-    const batch = chapters.slice(i, i + concurrency);
+  for (let i = 0; i < chapters.length; i += SUMMARY_CONCURRENCY) {
+    const batch = chapters.slice(i, i + SUMMARY_CONCURRENCY);
     const batchPromises = batch.map((chapter, batchIndex) => summarizeChapter(chapter, i + batchIndex));
 
     const batchResults = await Promise.all(batchPromises);
@@ -166,7 +162,7 @@ export const summarizeAllChapters = async (
       }
     }
 
-    logInfo(`[Summarizer] Progress: ${Math.min(i + concurrency, chapters.length)}/${chapters.length} chapters processed`);
+    logInfo(`[Summarizer] Progress: ${Math.min(i + SUMMARY_CONCURRENCY, chapters.length)}/${chapters.length} chapters processed`);
   }
 
   logInfo(`[Summarizer] Completed: ${summaries.length}/${chapters.length} summaries generated`);

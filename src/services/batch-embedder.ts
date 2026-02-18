@@ -55,8 +55,10 @@ export const submitBatchEmbeddings = async (chunks: BookChunk[]): Promise<BatchS
 export type BatchStatus = {
   status: string;
   completed: number;
+  failed: number;
   total: number;
   outputFileId: string | null;
+  errorFileId: string | null;
 };
 
 export const checkBatchStatus = async (batchId: string): Promise<BatchStatus> => {
@@ -65,8 +67,10 @@ export const checkBatchStatus = async (batchId: string): Promise<BatchStatus> =>
   return {
     status: batch.status,
     completed: batch.request_counts?.completed ?? 0,
+    failed: batch.request_counts?.failed ?? 0,
     total: batch.request_counts?.total ?? 0,
     outputFileId: batch.output_file_id ?? null,
+    errorFileId: batch.error_file_id ?? null,
   };
 };
 

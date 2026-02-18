@@ -4,7 +4,7 @@ import { createDb } from "./schema.js";
 
 export type BookInsert = Omit<
   BookRecord,
-  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "ingestState" | "ingestResumePath"
+  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "ingestState" | "ingestResumePath" | "summaryBatchId" | "summaryBatchFileId"
 > & {
   chunkCount?: number;
   indexedAt?: number | null;
@@ -17,6 +17,9 @@ export type BookInsert = Omit<
   batchChunks?: string | null;
   ingestState?: string | null;
   ingestResumePath?: string | null;
+  summaryBatchId?: string | null;
+  summaryBatchFileId?: string | null;
+  summaryBatchChapters?: string | null;
 };
 
 const mapRow = (row: any): BookRecord => ({
@@ -36,6 +39,8 @@ const mapRow = (row: any): BookRecord => ({
   batchFileId: row.batch_file_id ?? null,
   ingestState: row.ingest_state ?? null,
   ingestResumePath: row.ingest_resume_path ?? null,
+  summaryBatchId: row.summary_batch_id ?? null,
+  summaryBatchFileId: row.summary_batch_file_id ?? null,
 });
 
 let dbPromise: Promise<ReturnType<typeof Database>> | null = null;
@@ -136,6 +141,18 @@ export const updateBook = async (id: string, updates: Partial<BookInsert>) => {
     fields.push("ingest_resume_path = @ingestResumePath");
     params.ingestResumePath = updates.ingestResumePath;
   }
+  if (updates.summaryBatchId !== undefined) {
+    fields.push("summary_batch_id = @summaryBatchId");
+    params.summaryBatchId = updates.summaryBatchId;
+  }
+  if (updates.summaryBatchFileId !== undefined) {
+    fields.push("summary_batch_file_id = @summaryBatchFileId");
+    params.summaryBatchFileId = updates.summaryBatchFileId;
+  }
+  if (updates.summaryBatchChapters !== undefined) {
+    fields.push("summary_batch_chapters = @summaryBatchChapters");
+    params.summaryBatchChapters = updates.summaryBatchChapters;
+  }
 
   if (fields.length === 0) return;
 
@@ -159,6 +176,12 @@ export const getBookBatchChunks = async (id: string): Promise<string | null> => 
   const db = await getDb();
   const row = db.prepare("SELECT batch_chunks FROM books WHERE id = ?").get(id) as { batch_chunks?: string } | undefined;
   return row?.batch_chunks ?? null;
+};
+
+export const getBookSummaryBatchChapters = async (id: string): Promise<string | null> => {
+  const db = await getDb();
+  const row = db.prepare("SELECT summary_batch_chapters FROM books WHERE id = ?").get(id) as { summary_batch_chapters?: string } | undefined;
+  return row?.summary_batch_chapters ?? null;
 };
 
 export const deleteBook = async (id: string) => {

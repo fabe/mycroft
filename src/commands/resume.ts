@@ -1,5 +1,5 @@
-import { getBook, getBookBatchChunks } from "../db/queries.js";
-import { resumeIngest, resumeLocalIngest } from "../services/ingest.js";
+import { getBook, getBookBatchChunks, getBookSummaryBatchChapters } from "../db/queries.js";
+import { resumeIngest, resumeLocalIngest, resumeSummaryBatch, resumeMergeBatch } from "../services/ingest.js";
 import { ensureDataDirs, requireOpenAIKey } from "../services/constants.js";
 import { resolveBookId } from "./utils.js";
 import { stdout } from "./io.js";
@@ -24,6 +24,45 @@ export const resumeCommand = async (id: string) => {
     return;
   }
 
+  const shortId = resolvedId.slice(0, 8);
+
+  // Phase 1: Summary batch pending
+  if (book.summaryBatchId) {
+    const rawData = await getBookSummaryBatchChapters(resolvedId);
+    if (!rawData) {
+      throw new Error(`No stored summary batch data for book "${book.title}". Re-ingest with "mycroft book ingest --batch --summary".`);
+    }
+
+    const storedData = JSON.parse(rawData);
+
+    let result;
+    if (storedData.isMergePass) {
+      result = await resumeMergeBatch(resolvedId, book.summaryBatchId, book.summaryBatchFileId ?? book.summaryBatchId, storedData);
+    } else {
+      result = await resumeSummaryBatch(resolvedId, book.summaryBatchId, book.summaryBatchFileId ?? book.summaryBatchId, storedData);
+    }
+
+    if (result.status === "embeddings_submitted") {
+      stdout(`\nSummaries complete. Embedding batch submitted (${result.batchId}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check embedding batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # complete ingestion once batch finishes`);
+    } else if (result.status === "merge_submitted") {
+      stdout(`\nSection summaries complete. Merge batch submitted (${result.batchId}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check merge batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # continue when batch finishes`);
+    } else if (result.status === "resubmitted") {
+      stdout(`\nSummary batch failed and was re-submitted (${result.batchId}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # continue when batch finishes`);
+    } else {
+      stdout(`\nSummary batch still in progress (${result.status}: ${result.completed}/${result.total}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # retry when batch finishes`);
+    }
+    return;
+  }
+
+  // Phase 2: Embedding batch pending
   if (book.batchId) {
     const rawChunks = await getBookBatchChunks(resolvedId);
     if (!rawChunks) {
@@ -36,13 +75,18 @@ export const resumeCommand = async (id: string) => {
     if (result.status === "completed") {
       stdout(`\nDone. Book "${book.title}" indexed as ${book.id}`);
     } else if (result.status === "resubmitted") {
-      stdout(`\nBatch failed and was re-submitted (${result.batchId}). Run resume again later.`);
+      stdout(`\nBatch failed and was re-submitted (${result.batchId}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # complete ingestion once batch finishes`);
     } else {
-      stdout(`\nBatch still in progress (${result.status}: ${result.completed}/${result.total}). Run resume again later.`);
+      stdout(`\nBatch still in progress (${result.status}: ${result.completed}/${result.total}).`);
+      stdout(`  mycroft book ingest status ${shortId}   # check batch progress`);
+      stdout(`  mycroft book ingest resume ${shortId}   # retry when batch finishes`);
     }
     return;
   }
 
+  // Phase 3: Local resume (non-batch interrupted ingest)
   if (!book.ingestResumePath || book.ingestState !== "pending") {
     throw new Error(`Book "${book.title}" has no resumable ingest. Re-ingest to start one.`);
   }

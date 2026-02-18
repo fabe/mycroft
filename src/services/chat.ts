@@ -34,7 +34,6 @@ const summarizeMessages = async (messages: ChatMessage[]): Promise<string> => {
   const { text } = await generateText({
     model: openai(models.summary),
     prompt: `Summarize this conversation so far in ~${SUMMARY_TARGET_WORDS} words. Focus on facts, decisions, and unresolved questions.\n\n${transcript}`,
-    temperature: 0.3,
   });
   return text.trim();
 };

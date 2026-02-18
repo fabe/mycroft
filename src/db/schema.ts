@@ -69,6 +69,9 @@ export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   ensureColumn("batch_chunks", "batch_chunks TEXT");
   ensureColumn("ingest_state", "ingest_state TEXT");
   ensureColumn("ingest_resume_path", "ingest_resume_path TEXT");
+  ensureColumn("summary_batch_id", "summary_batch_id TEXT");
+  ensureColumn("summary_batch_file_id", "summary_batch_file_id TEXT");
+  ensureColumn("summary_batch_chapters", "summary_batch_chapters TEXT");
 
   return db;
 };

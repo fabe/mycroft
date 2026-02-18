@@ -15,6 +15,8 @@ export type BookRecord = {
   batchFileId: string | null;
   ingestState: string | null;
   ingestResumePath: string | null;
+  summaryBatchId: string | null;
+  summaryBatchFileId: string | null;
 };
 
 export type Chapter = {
