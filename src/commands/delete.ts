@@ -31,7 +31,9 @@ export const deleteCommand = async (id: string, options: { force?: boolean }) =>
   await deleteBook(resolvedId);
   await deleteBookIndex(resolvedId);
   if (book.epubPath) {
-    await unlink(book.epubPath).catch(() => undefined);
+    await unlink(book.epubPath).catch((err: NodeJS.ErrnoException) => {
+      if (err.code !== "ENOENT") throw err;
+    });
   }
   stdout(`Deleted book ${book.id}`);
 };

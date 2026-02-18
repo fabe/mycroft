@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { loadConfig } from "../config.js";
+import { loadConfig, type AppConfig } from "../config.js";
 import { logInfo, logWarn } from "../commands/io.js";
 
 export const CHUNK_SIZE: number = 1000;
@@ -10,6 +10,15 @@ export const SUMMARY_MAX_TOKENS = 30000;
 export const SUMMARY_CONCURRENCY = 3;
 export const SUMMARY_TARGET_WORDS = 250;
 
+let cachedConfig: AppConfig | null = null;
+
+const getCachedConfig = async (): Promise<AppConfig> => {
+  if (!cachedConfig) {
+    cachedConfig = await loadConfig();
+  }
+  return cachedConfig;
+};
+
 export type ResolvedPaths = {
   dataDir: string;
   booksDir: string;
@@ -19,7 +28,7 @@ export type ResolvedPaths = {
 };
 
 export const resolvePaths = async (): Promise<ResolvedPaths> => {
-  const config = await loadConfig();
+  const config = await getCachedConfig();
   const dataDir = config.dataDir;
   return {
     dataDir,
@@ -40,12 +49,12 @@ export const ensureDataDirs = async () => {
 };
 
 export const getModels = async () => {
-  const config = await loadConfig();
+  const config = await getCachedConfig();
   return config.models;
 };
 
 export const isAskEnabled = async () => {
-  const config = await loadConfig();
+  const config = await getCachedConfig();
   return config.askEnabled;
 };
 

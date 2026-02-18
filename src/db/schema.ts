@@ -9,6 +9,8 @@ const resolveDbPath = async () => {
 export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   const db = new Database(await resolveDbPath());
 
+  db.pragma("foreign_keys = ON");
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS books (
       id TEXT PRIMARY KEY,
@@ -27,7 +29,7 @@ export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS chat_sessions (
       id TEXT PRIMARY KEY,
-      book_id TEXT NOT NULL,
+      book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
       title TEXT,
       summary TEXT,
       created_at INTEGER DEFAULT (strftime('%s','now')),
@@ -38,7 +40,7 @@ export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS chat_messages (
       id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
+      session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
       role TEXT NOT NULL,
       content TEXT NOT NULL,
       token_count INTEGER,
@@ -51,7 +53,7 @@ export const createDb = async (): Promise<ReturnType<typeof Database>> => {
   const columns = db
     .prepare("PRAGMA table_info(books)")
     .all()
-    .map((col: { name: string }) => col.name);
+    .map((col: any) => (col as { name: string }).name);
 
   const ensureColumn = (name: string, definition: string) => {
     if (!columns.includes(name)) {

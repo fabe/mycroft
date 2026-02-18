@@ -1,3 +1,5 @@
+export type IngestState = "pending" | "embedding" | "summarizing" | null;
+
 export type BookRecord = {
   id: string;
   title: string;
@@ -13,10 +15,13 @@ export type BookRecord = {
   narrativeEndIndex: number | null;
   batchId: string | null;
   batchFileId: string | null;
-  ingestState: string | null;
+  batchChunks: string | null;
+  ingestState: IngestState;
   ingestResumePath: string | null;
   summaryBatchId: string | null;
   summaryBatchFileId: string | null;
+  summaryBatchChapters: string | null;
+  summaries: string | null;
 };
 
 export type Chapter = {

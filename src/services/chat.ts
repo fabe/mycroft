@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { embed, generateText } from "ai";
+import { embed, generateText, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getBook, getChatMessages, getChatSession, insertChatMessage, insertChatSession, listChatSessions, updateChatSession } from "../db/queries.js";
 import type { ChatMessage, ChatSession, ChatSessionSummary } from "../shared/types.js";
 import { ensureDataDirs, getModels, isAskEnabled, requireOpenAIKey } from "./constants.js";
 import { queryBookIndex } from "./vector-store.js";
 import { resolveBookId } from "../commands/utils.js";
+import { estimateTokens, formatContext, resolveMaxChapter } from "../shared/utils.js";
 
 const MAX_RECENT_MESSAGES = 12;
 const SUMMARY_TRIGGER_MESSAGES = 24;
@@ -15,16 +16,6 @@ type ChatAskOptions = {
   topK: number;
   maxChapter?: number;
 };
-
-const formatContext = (chunks: Array<{ content: string; chapterTitle: string; chapterIndex: number }>) =>
-  chunks
-    .map(
-      (chunk, index) =>
-        `Excerpt [${index + 1}] (${chunk.chapterTitle || `Chapter ${chunk.chapterIndex + 1}`}):\n${chunk.content}`
-    )
-    .join("\n\n");
-
-const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
 
 const summarizeMessages = async (messages: ChatMessage[]): Promise<string> => {
   const transcript = messages
@@ -101,13 +92,7 @@ export const chatAsk = async (sessionId: string, question: string, options: Chat
     value: question,
   });
 
-  const narrativeStart = book.narrativeStartIndex ?? 0;
-  const userProgress = book.progressChapter ?? null;
-  const maxChapterIndex = options.maxChapter !== undefined
-    ? narrativeStart + options.maxChapter
-    : userProgress !== null
-      ? narrativeStart + userProgress
-      : undefined;
+  const maxChapterIndex = resolveMaxChapter(book, options.maxChapter);
 
   const retrievalLimit = options.topK * 3;
   const allMatches = await queryBookIndex(session.bookId, embedding, question, retrievalLimit, maxChapterIndex);
@@ -121,7 +106,23 @@ export const chatAsk = async (sessionId: string, question: string, options: Chat
   const messages = await getChatMessages(sessionId);
   const conversation = buildConversationContext(session, messages);
 
-  const now = Date.now();
+  const now = Math.floor(Date.now() / 1000);
+
+  const prompt = [
+    conversation ? `Conversation:\n${conversation}` : "",
+    `Question: ${question}`,
+    context,
+  ].filter(Boolean).join("\n\n");
+
+  const stream = streamText({
+    model: openai(models.chat),
+    system: `You are a reading companion helping readers understand this book.\n\nGuidelines:\n- Use the provided chapter summaries and excerpts to answer questions\n- Chapter summaries provide high-level context about characters, events, and plot\n- Excerpts provide specific details and quotes\n- When asked for recaps or "what happened", synthesize from summaries\n- Don't cite table of contents, front matter, or structural elements\n- If truly unsure, briefly say so - but try to answer from available context first\n- Cite sources using [1], [2], etc. at the end of relevant sentences\n- The context may be limited to earlier chapters only - don't infer beyond what's provided`,
+    prompt,
+  });
+
+  const text = await stream.text;
+
+  // Insert both messages only after successful AI response
   const userMessage: ChatMessage = {
     id: randomUUID(),
     sessionId,
@@ -132,18 +133,6 @@ export const chatAsk = async (sessionId: string, question: string, options: Chat
   };
   await insertChatMessage(userMessage);
 
-  const prompt = [
-    conversation ? `Conversation:\n${conversation}` : "",
-    `Question: ${question}`,
-    context,
-  ].filter(Boolean).join("\n\n");
-
-  const { text } = await generateText({
-    model: openai(models.chat),
-    system: `You are a reading companion helping readers understand this book.\n\nGuidelines:\n- Use the provided chapter summaries and excerpts to answer questions\n- Chapter summaries provide high-level context about characters, events, and plot\n- Excerpts provide specific details and quotes\n- When asked for recaps or \"what happened\", synthesize from summaries\n- Don't cite table of contents, front matter, or structural elements\n- If truly unsure, briefly say so - but try to answer from available context first\n- Cite sources using [1], [2], etc. at the end of relevant sentences\n- The context may be limited to earlier chapters only - don't infer beyond what's provided`,
-    prompt,
-  });
-
   const assistantMessage: ChatMessage = {
     id: randomUUID(),
     sessionId,
@@ -153,7 +142,7 @@ export const chatAsk = async (sessionId: string, question: string, options: Chat
     createdAt: now,
   };
   await insertChatMessage(assistantMessage);
-  const updatedAt = Date.now();
+  const updatedAt = Math.floor(Date.now() / 1000);
   await updateChatSession(sessionId, { updatedAt });
   await maybeSummarizeSession(session, [...messages, userMessage, assistantMessage], updatedAt);
 

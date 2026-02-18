@@ -9,6 +9,10 @@ export const registerBookAsk = (program: import("commander").Command) => {
     .argument("<question>", "Question to ask")
     .option("--top-k <n>", "Number of passages to retrieve", "5")
     .option("--max-chapter <n>", "Spoiler-free limit (0-based within narrative)")
+    .addHelpText(
+      "after",
+      `\nEXAMPLES\n  mycroft book ask 8f2c1a4b "Who is the main character?"\n  mycroft book ask 8f2c1a4b "What happened in chapter 3?" --max-chapter 3\n`
+    )
     .action(async (
       id: string,
       question: string,

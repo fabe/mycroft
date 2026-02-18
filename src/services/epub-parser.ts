@@ -86,8 +86,9 @@ export const parseEpub = async (epubPath: string, resourceSaveDir?: string): Pro
 
   const suppressedWarnings = createWarnFilter();
 
+  let epubFile: Awaited<ReturnType<typeof initEpubFile>> | null = null;
   try {
-    const epubFile = await initEpubFile(epubPath, resourceSaveDir);
+    epubFile = await initEpubFile(epubPath, resourceSaveDir);
     await epubFile.loadEpub();
     logInfo(`[EPUB Parser] EPUB loaded successfully`);
 
@@ -115,7 +116,7 @@ export const parseEpub = async (epubPath: string, resourceSaveDir?: string): Pro
     const titleById = new Map<string, string>();
     const walkToc = (items: typeof toc) => {
       items.forEach((item: (typeof toc)[number]) => {
-        const resolved = epubFile.resolveHref(item.href);
+        const resolved = epubFile!.resolveHref(item.href);
         if (resolved?.id) titleById.set(resolved.id, item.label);
         if (item.children?.length) walkToc(item.children);
       });
@@ -137,8 +138,6 @@ export const parseEpub = async (epubPath: string, resourceSaveDir?: string): Pro
       chapterTitles.push(chapterTitle);
     }
 
-    epubFile.destroy();
-
     const author = safeMetadata.creator?.[0]?.contributor ?? null;
 
     logInfo(`[EPUB Parser] Extracted ${chapters.length} chapters with content`);
@@ -156,6 +155,7 @@ export const parseEpub = async (epubPath: string, resourceSaveDir?: string): Pro
       narrativeEndIndex,
     };
   } finally {
+    epubFile?.destroy();
     console.warn = originalWarn;
   }
 };

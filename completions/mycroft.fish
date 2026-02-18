@@ -15,6 +15,16 @@ function __mycroft_using_command
   return 1
 end
 
+function __mycroft_using_subcommand
+  set -l cmd (commandline -opc)
+  set -l sub $argv[1]
+  set -l subsub $argv[2]
+  if test (count $cmd) -ge 3; and test $cmd[2] = $sub; and test $cmd[3] = $subsub
+    return 0
+  end
+  return 1
+end
+
 complete -c mycroft -n '__mycroft_needs_command' -a 'book' -d 'Manage books and queries'
 complete -c mycroft -n '__mycroft_needs_command' -a 'config' -d 'Manage configuration'
 complete -c mycroft -n '__mycroft_needs_command' -a 'chat' -d 'Run multi-turn chat sessions'
@@ -29,8 +39,11 @@ complete -c mycroft -n '__mycroft_using_command book' -a 'ask' -d 'Ask a questio
 complete -c mycroft -n '__mycroft_using_command book' -a 'search' -d 'Vector search without LLM'
 complete -c mycroft -n '__mycroft_using_command book' -a 'delete' -d 'Remove book, EPUB, and vectors'
 
-complete -c mycroft -n '__mycroft_using_command book; and __fish_seen_subcommand_from ingest' -l manual -d 'Interactive chapter selection'
-complete -c mycroft -n '__mycroft_using_command book; and __fish_seen_subcommand_from ingest' -l no-summary -d 'Skip AI chapter summaries'
+complete -c mycroft -n '__mycroft_using_subcommand book ingest' -a 'status' -d 'Check ingestion status'
+complete -c mycroft -n '__mycroft_using_subcommand book ingest' -a 'resume' -d 'Resume a pending ingestion'
+complete -c mycroft -n '__mycroft_using_subcommand book ingest' -l manual -d 'Interactive chapter selection'
+complete -c mycroft -n '__mycroft_using_subcommand book ingest' -l summary -d 'Enable AI chapter summaries'
+complete -c mycroft -n '__mycroft_using_subcommand book ingest' -l batch -d 'Use OpenAI Batch API'
 complete -c mycroft -n '__mycroft_using_command book; and __fish_seen_subcommand_from ask search' -l top-k -r -d 'Number of passages to retrieve'
 complete -c mycroft -n '__mycroft_using_command book; and __fish_seen_subcommand_from ask search' -l max-chapter -r -d 'Spoiler-free limit'
 complete -c mycroft -n '__mycroft_using_command book; and __fish_seen_subcommand_from delete' -l force -d 'Skip confirmation'

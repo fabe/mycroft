@@ -87,7 +87,13 @@ export const downloadBatchResults = async (
 
   const vectors = new Map<number, number[]>();
   for (const line of lines) {
-    const result = JSON.parse(line);
+    let result: any;
+    try {
+      result = JSON.parse(line);
+    } catch {
+      logWarn(`[BatchEmbedder] Skipping malformed JSONL line`);
+      continue;
+    }
     const idx = Number(result.custom_id);
     if (result.response?.status_code === 200) {
       const embedding = result.response.body?.data?.[0]?.embedding;
@@ -101,10 +107,13 @@ export const downloadBatchResults = async (
     }
   }
 
-  const embedded: EmbeddedChunk[] = chunks.map((chunk, i) => ({
-    ...chunk,
-    vector: vectors.get(i) ?? [],
-  }));
+  const embedded: EmbeddedChunk[] = chunks.map((chunk, i) => {
+    const vector = vectors.get(i) ?? [];
+    if (vector.length === 0) {
+      logWarn(`[BatchEmbedder] Chunk ${i} has empty embedding — skipping vector insertion`);
+    }
+    return { ...chunk, vector };
+  });
 
   const missing = embedded.filter((e) => e.vector.length === 0).length;
   if (missing > 0) {

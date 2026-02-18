@@ -1,8 +1,3 @@
-declare module "better-sqlite3" {
-  const Database: any;
-  export default Database;
-}
-
 declare module "vectra" {
   export class LocalIndex<T = any> {
     constructor(path: string);

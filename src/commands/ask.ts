@@ -4,15 +4,8 @@ import { getBook } from "../db/queries.js";
 import { resolveBookId } from "./utils.js";
 import { queryBookIndex } from "../services/vector-store.js";
 import { ensureDataDirs, getModels, isAskEnabled, requireOpenAIKey } from "../services/constants.js";
-import { handleSigint } from "./io.js";
-
-const formatContext = (chunks: Array<{ content: string; chapterTitle: string; chapterIndex: number }>) =>
-  chunks
-    .map(
-      (chunk, index) =>
-        `Excerpt [${index + 1}] (${chunk.chapterTitle || `Chapter ${chunk.chapterIndex + 1}`}):\n${chunk.content}`
-    )
-    .join("\n\n");
+import { handleSigint, stdout } from "./io.js";
+import { formatContext, renderSources, resolveMaxChapter } from "../shared/utils.js";
 
 export const askCommand = async (
   id: string,
@@ -41,13 +34,7 @@ export const askCommand = async (
     value: question,
   });
 
-  const narrativeStart = book.narrativeStartIndex ?? 0;
-  const userProgress = book.progressChapter ?? null;
-  const maxChapterIndex = options.maxChapter !== undefined
-    ? narrativeStart + options.maxChapter
-    : userProgress !== null
-      ? narrativeStart + userProgress
-      : undefined;
+  const maxChapterIndex = resolveMaxChapter(book, options.maxChapter);
 
   const retrievalLimit = options.topK * 3;
   const allMatches = await queryBookIndex(resolvedId, embedding, question, retrievalLimit, maxChapterIndex);
@@ -86,12 +73,5 @@ Guidelines:
     releaseSigint();
   }
 
-  if (selectedMatches.length > 0) {
-    process.stdout.write("\n\nSources:\n");
-    selectedMatches.forEach((match, index) => {
-      const title = match.chapterTitle || `Chapter ${match.chapterIndex + 1}`;
-      const excerpt = match.content.slice(0, 120).replace(/\s+/g, " ");
-      process.stdout.write(`[${index + 1}] ${title}: ${excerpt}\n`);
-    });
-  }
+  stdout(renderSources(selectedMatches));
 };

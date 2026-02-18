@@ -7,6 +7,9 @@ _mycroft() {
   local -a book_commands
   book_commands=(ingest list show ask search delete)
 
+  local -a ingest_commands
+  ingest_commands=(status resume)
+
   local -a config_commands
   config_commands=(path init resolve onboard)
 
@@ -31,7 +34,17 @@ _mycroft() {
       fi
       case ${words[3]} in
         ingest)
-          _arguments "--manual[Interactive chapter selection]" "--no-summary[Skip AI chapter summaries]"
+          if (( CURRENT == 4 )); then
+            _describe -t commands "ingest commands" ingest_commands
+            _arguments "--manual[Interactive chapter selection]" "--summary[Enable AI chapter summaries]" "--batch[Use OpenAI Batch API]" '*:epub file:_files -g "*.epub"'
+            return
+          fi
+          case ${words[4]} in
+            status|resume)
+              return
+              ;;
+          esac
+          _arguments "--manual[Interactive chapter selection]" "--summary[Enable AI chapter summaries]" "--batch[Use OpenAI Batch API]"
           return
           ;;
         ask|search)

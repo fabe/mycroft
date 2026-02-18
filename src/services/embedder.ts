@@ -1,7 +1,7 @@
 import { embedMany } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { BookChunk } from "../shared/types.js";
-import { getModels, logInfo } from "./constants.js";
+import { getModels, logInfo, logWarn } from "./constants.js";
 
 export type EmbeddedChunk = BookChunk & {
   vector: number[];
@@ -62,9 +62,13 @@ export const embedChunks = async (
 
     const embeddedBatch: EmbeddedChunk[] = [];
     for (let j = 0; j < batch.length; j++) {
+      const vector = embeddings[j] ?? [];
+      if (vector.length === 0) {
+        logWarn(`[Embedder] Chunk ${allEmbedded.length + j} has empty embedding`);
+      }
       const embeddedChunk = {
         ...batch[j]!,
-        vector: embeddings[j] ?? [],
+        vector,
       };
       embeddedBatch.push(embeddedChunk);
       allEmbedded.push({

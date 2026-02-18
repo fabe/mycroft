@@ -9,6 +9,10 @@ export const registerBookSearch = (program: import("commander").Command) => {
     .argument("<query>", "Search query")
     .option("--top-k <n>", "Number of passages to retrieve", "5")
     .option("--max-chapter <n>", "Spoiler-free limit (0-based within narrative)")
+    .addHelpText(
+      "after",
+      `\nEXAMPLES\n  mycroft book search 8f2c1a4b "the storm scene"\n  mycroft book search 8f2c1a4b "betrayal" --top-k 10\n`
+    )
     .action(async (
       id: string,
       query: string,

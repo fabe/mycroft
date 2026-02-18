@@ -5,6 +5,7 @@ import { resolveBookId } from "./utils.js";
 import { queryBookIndex } from "../services/vector-store.js";
 import { ensureDataDirs, getModels, requireOpenAIKey } from "../services/constants.js";
 import { stdout } from "./io.js";
+import { resolveMaxChapter } from "../shared/utils.js";
 
 export const searchCommand = async (
   id: string,
@@ -28,11 +29,7 @@ export const searchCommand = async (
     value: query,
   });
 
-  const maxChapterIndex = options.maxChapter !== undefined
-    ? (book.narrativeStartIndex ?? 0) + options.maxChapter
-    : book.progressChapter !== null
-      ? (book.narrativeStartIndex ?? 0) + (book.progressChapter ?? 0)
-      : undefined;
+  const maxChapterIndex = resolveMaxChapter(book, options.maxChapter);
   const results = await queryBookIndex(resolvedId, embedding, query, options.topK, maxChapterIndex);
 
   if (results.length === 0) {

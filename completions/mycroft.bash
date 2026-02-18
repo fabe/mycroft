@@ -6,6 +6,7 @@ _mycroft() {
   local top_commands="book config chat"
   local global_flags="--help --version --data-dir"
   local book_commands="ingest list show ask search delete"
+  local ingest_commands="status resume"
   local config_commands="path init resolve onboard"
   local chat_commands="start ask list show repl"
 
@@ -22,7 +23,16 @@ _mycroft() {
       fi
       case "${COMP_WORDS[2]}" in
         ingest)
-          COMPREPLY=( $(compgen -W "--manual --no-summary" -- "${cur}") )
+          if [[ ${COMP_CWORD} -eq 3 ]]; then
+            COMPREPLY=( $(compgen -W "${ingest_commands} --manual --summary --batch" -f -- "${cur}") )
+            return 0
+          fi
+          case "${COMP_WORDS[3]}" in
+            status|resume)
+              return 0
+              ;;
+          esac
+          COMPREPLY=( $(compgen -W "--manual --summary --batch" -- "${cur}") )
           return 0
           ;;
         ask|search)

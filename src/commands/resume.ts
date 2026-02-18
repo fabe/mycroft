@@ -33,7 +33,12 @@ export const resumeCommand = async (id: string) => {
       throw new Error(`No stored summary batch data for book "${book.title}". Re-ingest with "mycroft book ingest --batch --summary".`);
     }
 
-    const storedData = JSON.parse(rawData);
+    let storedData: any;
+    try {
+      storedData = JSON.parse(rawData);
+    } catch {
+      throw new Error(`Corrupt summary batch data for book "${book.title}". Re-ingest with "mycroft book ingest --batch --summary".`);
+    }
 
     let result;
     if (storedData.isMergePass) {
@@ -69,7 +74,12 @@ export const resumeCommand = async (id: string) => {
       throw new Error(`No stored chunks found for book "${book.title}". Re-ingest with "mycroft book ingest --batch".`);
     }
 
-    const chunks: BookChunk[] = JSON.parse(rawChunks);
+    let chunks: BookChunk[];
+    try {
+      chunks = JSON.parse(rawChunks);
+    } catch {
+      throw new Error(`Corrupt chunk data for book "${book.title}". Re-ingest with "mycroft book ingest --batch".`);
+    }
     const result = await resumeIngest(resolvedId, chunks, book.batchId, book.batchFileId ?? book.batchId);
 
     if (result.status === "completed") {

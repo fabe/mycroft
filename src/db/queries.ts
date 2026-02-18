@@ -4,7 +4,7 @@ import { createDb } from "./schema.js";
 
 export type BookInsert = Omit<
   BookRecord,
-  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "ingestState" | "ingestResumePath" | "summaryBatchId" | "summaryBatchFileId"
+  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "batchChunks" | "ingestState" | "ingestResumePath" | "summaryBatchId" | "summaryBatchFileId" | "summaryBatchChapters" | "summaries"
 > & {
   chunkCount?: number;
   indexedAt?: number | null;
@@ -41,6 +41,9 @@ const mapRow = (row: any): BookRecord => ({
   ingestResumePath: row.ingest_resume_path ?? null,
   summaryBatchId: row.summary_batch_id ?? null,
   summaryBatchFileId: row.summary_batch_file_id ?? null,
+  summaryBatchChapters: row.summary_batch_chapters ?? null,
+  summaries: row.summaries ?? null,
+  batchChunks: row.batch_chunks ?? null,
 });
 
 let dbPromise: Promise<ReturnType<typeof Database>> | null = null;
@@ -186,9 +189,12 @@ export const getBookSummaryBatchChapters = async (id: string): Promise<string | 
 
 export const deleteBook = async (id: string) => {
   const db = await getDb();
-  db.prepare("DELETE FROM chat_messages WHERE session_id IN (SELECT id FROM chat_sessions WHERE book_id = ?)").run(id);
-  db.prepare("DELETE FROM chat_sessions WHERE book_id = ?").run(id);
-  db.prepare("DELETE FROM books WHERE id = ?").run(id);
+  const deleteAll = db.transaction((bookId: string) => {
+    db.prepare("DELETE FROM chat_messages WHERE session_id IN (SELECT id FROM chat_sessions WHERE book_id = ?)").run(bookId);
+    db.prepare("DELETE FROM chat_sessions WHERE book_id = ?").run(bookId);
+    db.prepare("DELETE FROM books WHERE id = ?").run(bookId);
+  });
+  deleteAll(id);
 };
 
 export type ChatSessionInsert = Omit<ChatSession, "createdAt" | "updatedAt"> & {
@@ -232,8 +238,8 @@ export const insertChatSession = async (session: ChatSessionInsert): Promise<str
     bookId: session.bookId,
     title: session.title ?? null,
     summary: session.summary ?? null,
-    createdAt: session.createdAt ?? Date.now(),
-    updatedAt: session.updatedAt ?? Date.now(),
+    createdAt: session.createdAt ?? Math.floor(Date.now() / 1000),
+    updatedAt: session.updatedAt ?? Math.floor(Date.now() / 1000),
   });
   return session.id;
 };
@@ -287,7 +293,7 @@ export const insertChatMessage = async (message: ChatMessageInsert): Promise<str
     role: message.role,
     content: message.content,
     tokenCount: message.tokenCount ?? null,
-    createdAt: message.createdAt ?? Date.now(),
+    createdAt: message.createdAt ?? Math.floor(Date.now() / 1000),
   });
   return message.id;
 };

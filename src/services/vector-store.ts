@@ -12,12 +12,17 @@ export type VectorMetadata = {
   type?: "chunk" | "summary";
 };
 
+const indexCache = new Map<string, LocalIndex<VectorMetadata>>();
+
 const indexPathForBook = async (bookId: string) => {
   const paths = await ensureDataDirs();
   return `${paths.vectorsDir}/${bookId}`;
 };
 
 export const createBookIndex = async (bookId: string): Promise<LocalIndex<VectorMetadata>> => {
+  const cached = indexCache.get(bookId);
+  if (cached) return cached;
+
   const index = new LocalIndex<VectorMetadata>(await indexPathForBook(bookId));
   const exists = await index.isIndexCreated();
   if (!exists) {
@@ -28,6 +33,7 @@ export const createBookIndex = async (bookId: string): Promise<LocalIndex<Vector
       },
     });
   }
+  indexCache.set(bookId, index);
   return index;
 };
 
@@ -80,6 +86,7 @@ export const queryBookIndex = async (
 };
 
 export const deleteBookIndex = async (bookId: string) => {
+  indexCache.delete(bookId);
   const index = new LocalIndex<VectorMetadata>(await indexPathForBook(bookId));
   const exists = await index.isIndexCreated();
   if (!exists) return;

@@ -3,6 +3,7 @@ import { resolveChatSessionId } from "./utils.js";
 import { isInteractive, stdout } from "../io.js";
 import { prompt } from "../prompt.js";
 import { parseQueryOptions } from "../query-options.js";
+import { renderSources } from "../../shared/utils.js";
 
 const shouldExit = (input: string) => {
   const normalized = input.trim().toLowerCase();
@@ -42,14 +43,7 @@ export const registerChatRepl = (program: import("commander").Command) => {
         if (shouldExit(question)) break;
         const { answer, sources } = await chatAsk(session.id, question, { topK, maxChapter });
         stdout(`\n${answer}`);
-        if (sources.length > 0) {
-          stdout("\nSources:");
-          sources.forEach((match, index) => {
-            const title = match.chapterTitle || `Chapter ${match.chapterIndex + 1}`;
-            const excerpt = match.content.slice(0, 120).replace(/\s+/g, " ");
-            stdout(`[${index + 1}] ${title}: ${excerpt}`);
-          });
-        }
+        stdout(renderSources(sources));
         stdout("");
       }
     });

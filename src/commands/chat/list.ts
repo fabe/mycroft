@@ -3,7 +3,7 @@ import { stdout } from "../io.js";
 
 const formatDate = (timestamp: number | null) => {
   if (!timestamp) return "-";
-  return new Date(timestamp).toISOString().slice(0, 10);
+  return new Date(timestamp * 1000).toISOString().slice(0, 10);
 };
 
 export const registerChatList = (program: import("commander").Command) => {

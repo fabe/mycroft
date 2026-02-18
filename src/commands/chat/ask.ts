@@ -2,6 +2,7 @@ import { chatAsk } from "../../services/chat.js";
 import { resolveChatSessionId } from "./utils.js";
 import { stdout } from "../io.js";
 import { parseQueryOptions } from "../query-options.js";
+import { renderSources } from "../../shared/utils.js";
 
 export const registerChatAsk = (program: import("commander").Command) => {
   program
@@ -24,14 +25,6 @@ export const registerChatAsk = (program: import("commander").Command) => {
       }
       const { answer, sources } = await chatAsk(resolvedId, question, { topK, maxChapter });
       stdout(answer);
-
-      if (sources.length > 0) {
-        stdout("\nSources:");
-        sources.forEach((match, index) => {
-          const title = match.chapterTitle || `Chapter ${match.chapterIndex + 1}`;
-          const excerpt = match.content.slice(0, 120).replace(/\s+/g, " ");
-          stdout(`[${index + 1}] ${title}: ${excerpt}`);
-        });
-      }
+      stdout(renderSources(sources));
     });
 };
