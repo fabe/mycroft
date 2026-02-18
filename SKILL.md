@@ -19,6 +19,7 @@ Common commands
 - Ingest EPUB: `mycroft book ingest /path/to/book.epub`
 - Ingest with summaries: `mycroft book ingest /path/to/book.epub --summary`
 - Ingest with batch embeddings (50% cheaper): `mycroft book ingest /path/to/book.epub --batch`
+- Resume batch ingestion: `mycroft book resume <id>`
 - Show metadata: `mycroft book show <id>`
 - Ask a question: `mycroft book ask <id> "What is the main conflict?"`
 - Search passages: `mycroft book search <id> "mad hatter" --top-k 5`
@@ -34,4 +35,6 @@ Notes
 - Prefer `book search` and synthesize answers yourself before using `book ask`.
 - Summaries increase ingestion time and cost significantly; enable `--summary` only when needed.
 - Use `--batch` to run embeddings via the OpenAI Batch API at 50% cost; results may take up to 24 hours.
+- After `--batch` ingestion, use `mycroft book resume <id>` to check status and complete indexing.
+- If a batch fails, `resume` automatically re-submits it.
 - For scripted runs, avoid interactive flags like `--manual` or omit confirmations with `--force`.

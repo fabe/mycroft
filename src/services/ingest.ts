@@ -3,7 +3,7 @@ import { mkdir, unlink, copyFile } from "node:fs/promises";
 import { parseEpub } from "./epub-parser.js";
 import { chunkChapters } from "./chunker.js";
 import { embedChunks } from "./embedder.js";
-import { embedChunksBatch } from "./batch-embedder.js";
+import { submitBatchEmbeddings } from "./batch-embedder.js";
 import { addChunksToIndex, deleteBookIndex } from "./vector-store.js";
 import { summarizeAllChapters } from "./summarizer.js";
 import { ensureDataDirs, logInfo, logWarn } from "./constants.js";
@@ -94,16 +94,27 @@ export const ingestEpub = async (
     logInfo(`[Ingest] Created ${chunks.length} chunks from selected chapters`);
 
     const allChunks = [...chunks, ...adjustedSummaries];
-    const embedStart = Date.now();
-    const embed = options?.batch ? embedChunksBatch : embedChunks;
-    const embedded = await embed(allChunks);
-    logInfo(`[Ingest] Embedded ${embedded.length} total chunks (${formatDuration(Date.now() - embedStart)})`);
 
-    await addChunksToIndex(bookId, embedded);
-    logInfo(`[Ingest] Added chunks to vector index`);
+    if (options?.batch) {
+      logInfo(`[Ingest] Submitting ${allChunks.length} chunks to OpenAI Batch API`);
+      const { batchId, inputFileId } = await submitBatchEmbeddings(allChunks);
+      await updateBook(bookId, {
+        batchId,
+        batchFileId: inputFileId,
+        batchChunks: JSON.stringify(allChunks),
+      });
+      logInfo(`[Ingest] Batch submitted (${batchId}). Run "mycroft book resume ${bookId.slice(0, 8)}" to complete ingestion.`);
+    } else {
+      const embedStart = Date.now();
+      const embedded = await embedChunks(allChunks);
+      logInfo(`[Ingest] Embedded ${embedded.length} total chunks (${formatDuration(Date.now() - embedStart)})`);
 
-    await updateBook(bookId, { chunkCount: embedded.length, indexedAt: Date.now() });
-    logInfo(`[Ingest] Updated book record with chunk count: ${embedded.length}`);
+      await addChunksToIndex(bookId, embedded);
+      logInfo(`[Ingest] Added chunks to vector index`);
+
+      await updateBook(bookId, { chunkCount: embedded.length, indexedAt: Date.now() });
+      logInfo(`[Ingest] Updated book record with chunk count: ${embedded.length}`);
+    }
   } catch (error) {
     logWarn(`[Ingest] Error during chunking/embedding: ${error instanceof Error ? error.message : String(error)}`);
     await deleteBookIndex(bookId);
@@ -114,4 +125,51 @@ export const ingestEpub = async (
 
   logInfo(`[Ingest] Ingestion complete for ${bookId}`);
   return { id: bookId };
+};
+
+export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], batchId: string, batchFileId: string) => {
+  const { checkBatchStatus, downloadBatchResults, cleanupBatchFiles } = await import("./batch-embedder.js");
+
+  logInfo(`[Resume] Checking batch ${batchId} for book ${bookId}`);
+  const status = await checkBatchStatus(batchId);
+
+  logInfo(`[Resume] Batch status: ${status.status} (completed: ${status.completed}/${status.total})`);
+
+  if (["validating", "in_progress", "finalizing"].includes(status.status)) {
+    return { status: status.status as "validating" | "in_progress" | "finalizing", completed: status.completed, total: status.total };
+  }
+
+  if (status.status === "failed" || status.status === "expired" || status.status === "cancelled") {
+    logWarn(`[Resume] Batch ${batchId} ended with status "${status.status}". Re-submitting...`);
+    await cleanupBatchFiles(batchFileId, status.outputFileId);
+
+    const { submitBatchEmbeddings } = await import("./batch-embedder.js");
+    const { batchId: newBatchId, inputFileId: newFileId } = await submitBatchEmbeddings(storedChunks);
+
+    await updateBook(bookId, { batchId: newBatchId, batchFileId: newFileId });
+    logInfo(`[Resume] New batch submitted (${newBatchId}). Run resume again later.`);
+    return { status: "resubmitted" as const, batchId: newBatchId };
+  }
+
+  if (status.status !== "completed" || !status.outputFileId) {
+    throw new Error(`Unexpected batch status: ${status.status}`);
+  }
+
+  const embedded = await downloadBatchResults(status.outputFileId, storedChunks);
+
+  await addChunksToIndex(bookId, embedded);
+  logInfo(`[Resume] Added ${embedded.length} chunks to vector index`);
+
+  await updateBook(bookId, {
+    chunkCount: embedded.length,
+    indexedAt: Date.now(),
+    batchId: null,
+    batchFileId: null,
+    batchChunks: null,
+  });
+  logInfo(`[Resume] Book ${bookId} indexing complete`);
+
+  await cleanupBatchFiles(batchFileId, status.outputFileId);
+
+  return { status: "completed" as const };
 };

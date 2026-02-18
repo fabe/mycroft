@@ -3,8 +3,6 @@ import type { BookChunk } from "../shared/types.js";
 import type { EmbeddedChunk } from "./embedder.js";
 import { getModels, logInfo, logWarn } from "./constants.js";
 
-const POLL_INTERVAL_MS = 10_000;
-
 type BatchRequestLine = {
   custom_id: string;
   method: "POST";
@@ -25,9 +23,12 @@ const buildJsonl = (chunks: BookChunk[], model: string): string =>
     .map((line) => JSON.stringify(line))
     .join("\n");
 
-export const embedChunksBatch = async (chunks: BookChunk[]): Promise<EmbeddedChunk[]> => {
-  if (chunks.length === 0) return [];
+export type BatchSubmitResult = {
+  batchId: string;
+  inputFileId: string;
+};
 
+export const submitBatchEmbeddings = async (chunks: BookChunk[]): Promise<BatchSubmitResult> => {
   const models = await getModels();
   const client = new OpenAI();
 
@@ -48,27 +49,35 @@ export const embedChunksBatch = async (chunks: BookChunk[]): Promise<EmbeddedChu
   });
   logInfo(`[BatchEmbedder] Created batch ${batch.id} — status: ${batch.status}`);
 
-  let current = batch;
-  while (!["completed", "failed", "expired", "cancelled"].includes(current.status)) {
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    current = await client.batches.retrieve(batch.id);
-    const counts = current.request_counts;
-    logInfo(
-      `[BatchEmbedder] Status: ${current.status} (completed: ${counts?.completed ?? 0}/${counts?.total ?? 0})`
-    );
-  }
+  return { batchId: batch.id, inputFileId: file.id };
+};
 
-  if (current.status !== "completed") {
-    const errMsg = current.errors?.data?.map((e) => e.message).join("; ") ?? "unknown error";
-    throw new Error(`Batch ${batch.id} ended with status "${current.status}": ${errMsg}`);
-  }
+export type BatchStatus = {
+  status: string;
+  completed: number;
+  total: number;
+  outputFileId: string | null;
+};
 
-  if (!current.output_file_id) {
-    throw new Error(`Batch ${batch.id} completed but has no output file`);
-  }
+export const checkBatchStatus = async (batchId: string): Promise<BatchStatus> => {
+  const client = new OpenAI();
+  const batch = await client.batches.retrieve(batchId);
+  return {
+    status: batch.status,
+    completed: batch.request_counts?.completed ?? 0,
+    total: batch.request_counts?.total ?? 0,
+    outputFileId: batch.output_file_id ?? null,
+  };
+};
 
-  logInfo(`[BatchEmbedder] Downloading results from ${current.output_file_id}`);
-  const response = await client.files.content(current.output_file_id);
+export const downloadBatchResults = async (
+  outputFileId: string,
+  chunks: BookChunk[],
+): Promise<EmbeddedChunk[]> => {
+  const client = new OpenAI();
+
+  logInfo(`[BatchEmbedder] Downloading results from ${outputFileId}`);
+  const response = await client.files.content(outputFileId);
   const text = await response.text();
   const lines = text.trim().split("\n");
 
@@ -99,12 +108,13 @@ export const embedChunksBatch = async (chunks: BookChunk[]): Promise<EmbeddedChu
   }
 
   logInfo(`[BatchEmbedder] Successfully processed ${embedded.length} chunks via batch API`);
-
-  // Clean up uploaded files
-  await client.files.del(file.id).catch(() => undefined);
-  if (current.output_file_id) {
-    await client.files.del(current.output_file_id).catch(() => undefined);
-  }
-
   return embedded;
+};
+
+export const cleanupBatchFiles = async (inputFileId: string, outputFileId?: string | null) => {
+  const client = new OpenAI();
+  await client.files.del(inputFileId).catch(() => undefined);
+  if (outputFileId) {
+    await client.files.del(outputFileId).catch(() => undefined);
+  }
 };

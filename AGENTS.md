@@ -18,6 +18,7 @@ node dist/cli.js --help
 mycroft config onboard
 mycroft book ingest /path/to/book.epub
 mycroft book ingest /path/to/book.epub --batch
+mycroft book resume <id>
 mycroft book ask <id> "What is the main conflict?"
 mycroft chat start <id>
 mycroft chat ask <session> "What does this foreshadow?"

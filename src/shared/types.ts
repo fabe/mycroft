@@ -11,6 +11,8 @@ export type BookRecord = {
   progressChapter: number | null;
   narrativeStartIndex: number | null;
   narrativeEndIndex: number | null;
+  batchId: string | null;
+  batchFileId: string | null;
 };
 
 export type Chapter = {
