@@ -34,7 +34,7 @@ Notes
 - Chat commands require embeddings and an `OPENAI_API_KEY`.
 - Prefer `book search` and synthesize answers yourself before using `book ask`.
 - Summaries increase ingestion time and cost significantly; enable `--summary` only when needed.
-- Use `--batch` to run embeddings via the OpenAI Batch API at 50% cost; results may take up to 24 hours.
+- Use `--batch` to run embeddings via the OpenAI Batch API at 50% cost; results may take up to 24 hours, and summaries (if enabled) run sequentially.
 - After `--batch` ingestion, use `mycroft book ingest resume <id>` to check status and complete indexing.
 - If a non-batch ingest is interrupted, use `mycroft book ingest resume <id>` to continue from the last saved chunk.
 - If a batch fails, `resume` automatically re-submits it.

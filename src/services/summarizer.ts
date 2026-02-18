@@ -143,13 +143,19 @@ export const summarizeChapter = async (
   }
 };
 
-export const summarizeAllChapters = async (chapters: Chapter[]): Promise<ChapterSummary[]> => {
+export const summarizeAllChapters = async (
+  chapters: Chapter[],
+  options?: { batch?: boolean }
+): Promise<ChapterSummary[]> => {
   const summaries: ChapterSummary[] = [];
+  const concurrency = options?.batch ? 1 : SUMMARY_CONCURRENCY;
 
-  logInfo(`[Summarizer] Starting summarization of ${chapters.length} chapters (concurrency: ${SUMMARY_CONCURRENCY})`);
+  logInfo(
+    `[Summarizer] Starting summarization of ${chapters.length} chapters (concurrency: ${concurrency}${options?.batch ? ", batch mode" : ""})`
+  );
 
-  for (let i = 0; i < chapters.length; i += SUMMARY_CONCURRENCY) {
-    const batch = chapters.slice(i, i + SUMMARY_CONCURRENCY);
+  for (let i = 0; i < chapters.length; i += concurrency) {
+    const batch = chapters.slice(i, i + concurrency);
     const batchPromises = batch.map((chapter, batchIndex) => summarizeChapter(chapter, i + batchIndex));
 
     const batchResults = await Promise.all(batchPromises);
@@ -160,7 +166,7 @@ export const summarizeAllChapters = async (chapters: Chapter[]): Promise<Chapter
       }
     }
 
-    logInfo(`[Summarizer] Progress: ${Math.min(i + SUMMARY_CONCURRENCY, chapters.length)}/${chapters.length} chapters processed`);
+    logInfo(`[Summarizer] Progress: ${Math.min(i + concurrency, chapters.length)}/${chapters.length} chapters processed`);
   }
 
   logInfo(`[Summarizer] Completed: ${summaries.length}/${chapters.length} summaries generated`);

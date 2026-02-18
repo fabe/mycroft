@@ -45,7 +45,7 @@ These are rough, model-dependent estimates for embeddings + optional summaries. 
 
 Reference point: a ~700 page book (~1,600 chunks) is about ~$0.008 for embeddings only, and about ~$0.20 with summaries.
 
-Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job. Use `mycroft book ingest resume <id>` to check status and complete ingestion once the batch finishes. If a non-batch ingest is interrupted, use the same resume command to continue without re-embedding completed chunks.
+Use `--batch` to cut embedding costs by 50% via the OpenAI Batch API. Batch jobs may take up to 24 hours to complete. When using `--batch`, the command returns immediately after submitting the job, and chapter summaries (if enabled) run sequentially to reduce concurrency. Use `mycroft book ingest resume <id>` to check status and complete ingestion once the batch finishes. If a non-batch ingest is interrupted, use the same resume command to continue without re-embedding completed chunks.
 
 ## Local dev
 

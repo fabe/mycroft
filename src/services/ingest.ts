@@ -100,7 +100,7 @@ export const ingestEpub = async (
     if (options?.summarize !== false) {
       logInfo(`[Ingest] Generating summaries for ${chaptersToProcess.length} chapters...`);
       const summarizeStart = Date.now();
-      const summaries = await summarizeAllChapters(chaptersToProcess);
+      const summaries = await summarizeAllChapters(chaptersToProcess, { batch: options?.batch });
       logInfo(`[Ingest] Generated ${summaries.length}/${chaptersToProcess.length} summaries (${formatDuration(Date.now() - summarizeStart)})`);
 
       const summaryRecords = summaries.map((s, idx) => ({

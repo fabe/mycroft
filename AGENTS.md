@@ -55,6 +55,12 @@ mycroft chat repl <session>
 - `OPENAI_API_KEY` is required for embeddings and chat.
 - `MYCROFT_DATA_DIR` and `MYCROFT_CONFIG` override paths.
 
+## Notes
+
+- `--batch` runs embeddings via the OpenAI Batch API; batch ingests return immediately.
+- When `--batch` is enabled, chapter summaries (if used) run sequentially to reduce concurrency.
+- Use `mycroft book ingest resume <id>` to complete batch ingests or recover interrupted local ingests.
+
 ## Tests
 
 There are no automated tests in this repo. Use manual CLI runs for verification.
