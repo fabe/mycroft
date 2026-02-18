@@ -1,13 +1,13 @@
 ---
 name: mycroft
-description: EPUB ingestion, local vector index, and Q&A CLI for books.
+description: EPUB and ebook ingestion, local vector index, and Q&A CLI for books.
 homepage: https://github.com/fabe/mycroft
 metadata: {"clawdbot":{"emoji":"📚","requires":{"bins":["mycroft"],"env":["OPENAI_API_KEY"]},"install":[{"id":"npm","kind":"npm","package":"@fs/mycroft","bins":["mycroft"],"label":"Install mycroft (npm)"}]}}
 ---
 
 # mycroft
 
-Use `mycroft` to ingest EPUBs, build a local vector index, and ask questions about a book.
+Use `mycroft` to ingest EPUBs and ebooks, build a local vector index, and ask questions about a book.
 
 Setup (once)
 - `export OPENAI_API_KEY="..."`
