@@ -48,6 +48,7 @@ mycroft chat repl <session>
 - Config: `~/.config/mycroft/config.json`
 - Data dir: `~/.local/share/mycroft`
 - SQLite DB: `metadata.db` in the data dir
+- Resume state: `ingest/` in the data dir
 
 ## Environment
 

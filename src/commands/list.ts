@@ -23,7 +23,13 @@ export const listCommand = async () => {
     const author = book.author || "-";
     const chunks = String(book.chunkCount ?? 0);
     const indexed = formatDate(book.indexedAt);
-    const status = book.indexedAt ? "[indexed]" : book.batchId ? "[batch pending]" : "[pending]";
+    const status = book.indexedAt
+      ? "[indexed]"
+      : book.batchId
+        ? "[batch pending]"
+        : book.ingestState === "pending"
+          ? "[resume pending]"
+          : "[pending]";
     stdout(`${shortId} | ${title} | ${author} | ${chunks} | ${indexed} | ${status}`);
   }
 };

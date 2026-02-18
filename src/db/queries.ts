@@ -4,7 +4,7 @@ import { createDb } from "./schema.js";
 
 export type BookInsert = Omit<
   BookRecord,
-  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId"
+  "createdAt" | "indexedAt" | "chunkCount" | "progressChapter" | "narrativeStartIndex" | "narrativeEndIndex" | "batchId" | "batchFileId" | "ingestState" | "ingestResumePath"
 > & {
   chunkCount?: number;
   indexedAt?: number | null;
@@ -15,6 +15,8 @@ export type BookInsert = Omit<
   batchId?: string | null;
   batchFileId?: string | null;
   batchChunks?: string | null;
+  ingestState?: string | null;
+  ingestResumePath?: string | null;
 };
 
 const mapRow = (row: any): BookRecord => ({
@@ -32,6 +34,8 @@ const mapRow = (row: any): BookRecord => ({
   narrativeEndIndex: row.narrative_end_index ?? null,
   batchId: row.batch_id ?? null,
   batchFileId: row.batch_file_id ?? null,
+  ingestState: row.ingest_state ?? null,
+  ingestResumePath: row.ingest_resume_path ?? null,
 });
 
 let dbPromise: Promise<ReturnType<typeof Database>> | null = null;
@@ -123,6 +127,14 @@ export const updateBook = async (id: string, updates: Partial<BookInsert>) => {
   if (updates.batchChunks !== undefined) {
     fields.push("batch_chunks = @batchChunks");
     params.batchChunks = updates.batchChunks;
+  }
+  if (updates.ingestState !== undefined) {
+    fields.push("ingest_state = @ingestState");
+    params.ingestState = updates.ingestState;
+  }
+  if (updates.ingestResumePath !== undefined) {
+    fields.push("ingest_resume_path = @ingestResumePath");
+    params.ingestResumePath = updates.ingestResumePath;
   }
 
   if (fields.length === 0) return;

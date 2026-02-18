@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, copyFile } from "node:fs/promises";
+import { mkdir, unlink, copyFile, readFile, writeFile } from "node:fs/promises";
 import { parseEpub } from "./epub-parser.js";
 import { chunkChapters } from "./chunker.js";
 import { embedChunks } from "./embedder.js";
@@ -9,6 +9,42 @@ import { summarizeAllChapters } from "./summarizer.js";
 import { ensureDataDirs, logInfo, logWarn } from "./constants.js";
 import { deleteBook, insertBook, updateBook } from "../db/queries.js";
 import type { BookChunk } from "../shared/types.js";
+import type { EmbeddedChunk } from "./embedder.js";
+
+type ResumeState = {
+  chunks: BookChunk[];
+  resumeIndex: number;
+};
+
+const resumePathForBook = async (bookId: string) => {
+  const paths = await ensureDataDirs();
+  return `${paths.ingestDir}/${bookId}.json`;
+};
+
+const loadResumeState = async (bookId: string, resumePath: string): Promise<ResumeState> => {
+  const raw = await readFile(resumePath, "utf-8");
+  const parsed = JSON.parse(raw) as ResumeState;
+  if (!Array.isArray(parsed.chunks) || typeof parsed.resumeIndex !== "number") {
+    throw new Error(`Invalid resume state for book ${bookId}. Re-ingest to start over.`);
+  }
+  return parsed;
+};
+
+const persistResumeState = async (bookId: string, state: ResumeState) => {
+  const resumePath = await resumePathForBook(bookId);
+  await writeFile(resumePath, JSON.stringify(state));
+  await updateBook(bookId, {
+    ingestState: "pending",
+    ingestResumePath: resumePath,
+  });
+  return resumePath;
+};
+
+const finalizeResumeState = async (bookId: string, resumePath?: string | null) => {
+  const path = resumePath || (await resumePathForBook(bookId));
+  await unlink(path).catch(() => undefined);
+  await updateBook(bookId, { ingestState: null, ingestResumePath: null });
+};
 
 const formatDuration = (ms: number) => {
   const seconds = Math.round(ms / 100) / 10;
@@ -24,6 +60,7 @@ export const ingestEpub = async (
   const paths = await ensureDataDirs();
   const fileName = `${bookId}.epub`;
   const bookPath = `${paths.booksDir}/${fileName}`;
+  let resumePath: string | null = null;
 
   logInfo(`[Ingest] Starting ingestion for book ${bookId}`);
 
@@ -106,25 +143,39 @@ export const ingestEpub = async (
       logInfo(`[Ingest] Batch submitted (${batchId}). Run "mycroft book ingest resume ${bookId.slice(0, 8)}" to complete ingestion.`);
     } else {
       const embedStart = Date.now();
-      const embedded = await embedChunks(allChunks);
+      resumePath = await persistResumeState(bookId, { chunks: allChunks, resumeIndex: 0 });
+      const embedded = await embedChunks(allChunks, {
+        onBatch: async (embeddedBatch, progress) => {
+          await addChunksToIndex(bookId, embeddedBatch);
+          await updateBook(bookId, { chunkCount: progress.completed });
+          if (!resumePath) return;
+          await writeFile(
+            resumePath,
+            JSON.stringify({ chunks: allChunks, resumeIndex: progress.completed })
+          );
+        },
+      });
       logInfo(`[Ingest] Embedded ${embedded.length} total chunks (${formatDuration(Date.now() - embedStart)})`);
-
-      await addChunksToIndex(bookId, embedded);
-      logInfo(`[Ingest] Added chunks to vector index`);
 
       await updateBook(bookId, { chunkCount: embedded.length, indexedAt: Date.now() });
       logInfo(`[Ingest] Updated book record with chunk count: ${embedded.length}`);
+      await finalizeResumeState(bookId, resumePath);
     }
   } catch (error) {
     logWarn(`[Ingest] Error during chunking/embedding: ${error instanceof Error ? error.message : String(error)}`);
-    await deleteBookIndex(bookId);
-    await unlink(bookPath).catch(() => undefined);
-    await deleteBook(bookId).catch(() => undefined);
+    if (resumePath) {
+      logWarn(`[Ingest] Partial progress saved. Run "mycroft book ingest resume ${bookId.slice(0, 8)}" to continue.`);
+      return { id: bookId, status: "interrupted" as const };
+    } else {
+      await deleteBookIndex(bookId);
+      await unlink(bookPath).catch(() => undefined);
+      await deleteBook(bookId).catch(() => undefined);
+    }
     throw error;
   }
 
   logInfo(`[Ingest] Ingestion complete for ${bookId}`);
-  return { id: bookId };
+  return { id: bookId, status: "completed" as const };
 };
 
 export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], batchId: string, batchFileId: string) => {
@@ -172,4 +223,41 @@ export const resumeIngest = async (bookId: string, storedChunks: BookChunk[], ba
   await cleanupBatchFiles(batchFileId, status.outputFileId);
 
   return { status: "completed" as const };
+};
+
+export const resumeLocalIngest = async (bookId: string, resumePath: string, currentChunkCount: number) => {
+  const state = await loadResumeState(bookId, resumePath);
+  const total = state.chunks.length;
+  const startIndex = Math.max(state.resumeIndex, currentChunkCount);
+
+  if (startIndex >= total) {
+    await finalizeResumeState(bookId, resumePath);
+    throw new Error(`Resume state already completed for book ${bookId}.`);
+  }
+
+  logInfo(`[Resume] Resuming local embeddings at chunk ${startIndex + 1}/${total}`);
+  const embedStart = Date.now();
+  const remaining = state.chunks.slice(startIndex);
+  const embeddedRemaining = await embedChunks(remaining, {
+    onBatch: async (embeddedBatch, progress) => {
+      const completed = startIndex + progress.completed;
+      await addChunksToIndex(bookId, embeddedBatch);
+      await updateBook(bookId, { chunkCount: completed });
+      await writeFile(
+        resumePath,
+        JSON.stringify({ chunks: state.chunks, resumeIndex: completed })
+      );
+    },
+  });
+
+  logInfo(`[Resume] Embedded ${embeddedRemaining.length} remaining chunks (${formatDuration(Date.now() - embedStart)})`);
+
+  const finalCount = startIndex + embeddedRemaining.length;
+  await updateBook(bookId, {
+    chunkCount: finalCount,
+    indexedAt: Date.now(),
+  });
+  await finalizeResumeState(bookId, resumePath);
+
+  return { status: "completed" as const, chunkCount: finalCount };
 };

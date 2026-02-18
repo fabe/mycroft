@@ -10,7 +10,17 @@ export type EmbeddedChunk = BookChunk & {
 const MAX_TOKENS_PER_BATCH = 250_000;
 const CHARS_PER_TOKEN = 4;
 
-export const embedChunks = async (chunks: BookChunk[]): Promise<EmbeddedChunk[]> => {
+type EmbedProgress = {
+  batchIndex: number;
+  batchCount: number;
+  completed: number;
+  total: number;
+};
+
+export const embedChunks = async (
+  chunks: BookChunk[],
+  options?: { onBatch?: (embedded: EmbeddedChunk[], progress: EmbedProgress) => Promise<void> | void }
+): Promise<EmbeddedChunk[]> => {
   if (chunks.length === 0) return [];
 
   const batches: BookChunk[][] = [];
@@ -50,10 +60,24 @@ export const embedChunks = async (chunks: BookChunk[]): Promise<EmbeddedChunk[]>
       values: batch.map((chunk) => chunk.content),
     });
 
+    const embeddedBatch: EmbeddedChunk[] = [];
     for (let j = 0; j < batch.length; j++) {
-      allEmbedded.push({
+      const embeddedChunk = {
         ...batch[j]!,
         vector: embeddings[j] ?? [],
+      };
+      embeddedBatch.push(embeddedChunk);
+      allEmbedded.push({
+        ...embeddedChunk,
+      });
+    }
+
+    if (options?.onBatch) {
+      await options.onBatch(embeddedBatch, {
+        batchIndex: i + 1,
+        batchCount: batches.length,
+        completed: allEmbedded.length,
+        total: chunks.length,
       });
     }
   }

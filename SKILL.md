@@ -36,5 +36,6 @@ Notes
 - Summaries increase ingestion time and cost significantly; enable `--summary` only when needed.
 - Use `--batch` to run embeddings via the OpenAI Batch API at 50% cost; results may take up to 24 hours.
 - After `--batch` ingestion, use `mycroft book ingest resume <id>` to check status and complete indexing.
+- If a non-batch ingest is interrupted, use `mycroft book ingest resume <id>` to continue from the last saved chunk.
 - If a batch fails, `resume` automatically re-submits it.
 - For scripted runs, avoid interactive flags like `--manual` or omit confirmations with `--force`.
