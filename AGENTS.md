@@ -70,7 +70,7 @@ Run the test suite with `npm test`. Run with coverage via `npm run test:coverage
 
 The suite uses **Vitest** (v4) with native ESM + TypeScript support. No `OPENAI_API_KEY` is needed -- all AI calls are mocked.
 
-### Test files (162 tests across 14 files)
+### Test files (161 tests across 14 files)
 
 | File | What it covers |
 |---|---|

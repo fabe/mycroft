@@ -16,23 +16,24 @@ const FIXTURE_PATH = resolve(__dirname, "../fixtures/test.epub");
 const hasFixture = existsSync(FIXTURE_PATH);
 
 describe("parseEpub", () => {
+  // Fixture is Alice's Adventures in Wonderland (Project Gutenberg).
+  // 14 chapters: Contents, 12 narrative chapters (I–XII), and the PG license.
+  // Narrative boundaries: index 1 (Ch I) to 13 (license is excluded by endIndex).
+
   describe.skipIf(!hasFixture)("with fixture epub", () => {
-    it("parses the epub and returns a ParsedBook", async () => {
+    it("parses the epub and returns correct title and author", async () => {
       const result = await parseEpub(FIXTURE_PATH);
 
-      expect(result.title).toBeDefined();
-      expect(typeof result.title).toBe("string");
-      expect(result.title.length).toBeGreaterThan(0);
+      expect(result.title).toBe("Alice's Adventures in Wonderland");
+      expect(result.author).toBe("Lewis Carroll");
     });
 
-    it("extracts chapters with titles and content", async () => {
+    it("extracts all 14 chapters with content", async () => {
       const result = await parseEpub(FIXTURE_PATH);
 
-      expect(result.chapters.length).toBeGreaterThan(0);
+      expect(result.chapters).toHaveLength(14);
       for (const chapter of result.chapters) {
         expect(chapter.title).toBeDefined();
-        expect(typeof chapter.title).toBe("string");
-        expect(chapter.content).toBeDefined();
         expect(typeof chapter.content).toBe("string");
         expect(chapter.content.length).toBeGreaterThan(0);
       }
@@ -42,16 +43,20 @@ describe("parseEpub", () => {
       const result = await parseEpub(FIXTURE_PATH);
 
       expect(result.chapterTitles).toHaveLength(result.chapters.length);
-      for (let i = 0; i < result.chapters.length; i++) {
-        expect(result.chapterTitles[i]).toBe(result.chapters[i]!.title);
-      }
+      expect(result.chapterTitles[0]).toBe("Contents");
+      expect(result.chapterTitles[1]).toBe("CHAPTER I. Down the Rabbit-Hole");
+      expect(result.chapterTitles[12]).toMatch(/CHAPTER XII\. Alice.s Evidence/);
     });
 
-    it("detects narrative boundaries", async () => {
+    it("detects narrative boundaries (skips Contents and license)", async () => {
       const result = await parseEpub(FIXTURE_PATH);
 
-      expect(result.narrativeStartIndex).toBeGreaterThanOrEqual(0);
-      expect(result.narrativeEndIndex).toBeGreaterThanOrEqual(result.narrativeStartIndex);
+      // Contents is index 0 (front matter), narrative starts at 1
+      expect(result.narrativeStartIndex).toBe(1);
+      // 12 narrative chapters (I–XII), last narrative is index 12
+      // Index 13 is the PG license, so endIndex should be 12 or 13
+      // depending on whether the parser considers the license as back matter
+      expect(result.narrativeEndIndex).toBeGreaterThanOrEqual(12);
       expect(result.narrativeEndIndex).toBeLessThan(result.chapters.length);
     });
 
@@ -59,21 +64,15 @@ describe("parseEpub", () => {
       const result = await parseEpub(FIXTURE_PATH);
 
       for (const chapter of result.chapters) {
-        // Should not contain HTML tags
         expect(chapter.content).not.toMatch(/<[a-z][^>]*>/i);
-        // Should not contain &nbsp; entities
         expect(chapter.content).not.toContain("&nbsp;");
       }
     });
 
-    it("returns author as string or null", async () => {
+    it("returns a coverImagePath", async () => {
       const result = await parseEpub(FIXTURE_PATH);
-      expect(result.author === null || typeof result.author === "string").toBe(true);
-    });
-
-    it("returns coverImagePath as string or null", async () => {
-      const result = await parseEpub(FIXTURE_PATH);
-      expect(result.coverImagePath === null || typeof result.coverImagePath === "string").toBe(true);
+      expect(result.coverImagePath).not.toBeNull();
+      expect(typeof result.coverImagePath).toBe("string");
     });
   });
 
